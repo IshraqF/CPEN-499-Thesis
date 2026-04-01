@@ -52,6 +52,14 @@ class GarnetNetwork(RubyNetwork):
     garnet_deadlock_threshold = Param.UInt32(
         50000, "network-level deadlock threshold"
     )
+    qtable_file      = Param.String("", "path to Q-table binary file; "
+                                       "empty = do not load/save")
+    rl_epsilon       = Param.Float(0.1, "RL exploration rate (0=eval, 0.1=train)")
+    rl_warmup_cycles = Param.UInt64(300000, "cycles before Q-updates begin")
+    mttf_output_file = Param.String("garnet_mttf_report.txt",
+                           "output file for per-component MTTF data; written "
+                           "at simulation end; use different names for DOR "
+                           "and RL runs to avoid overwriting")
 
 
 class GarnetNetworkInterface(ClockedObject):

@@ -34,6 +34,10 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
+#include <string>
+#include <unordered_map>
+#include <random>
 
 #include "mem/ruby/network/Network.hh"
 #include "mem/ruby/network/fault_model/FaultModel.hh"
@@ -58,12 +62,19 @@ class NetworkLink;
 class NetworkBridge;
 class CreditLink;
 
+// Per-router process-variation data (computed once at init, never changes)
+struct RouterPVData {
+    double delta_vth;   // ΔVth = rand + sys component (Volts)
+    double delta_leff;  // ΔLeff = rand + sys component (metres)
+    double isub;        // precomputed I_sub (A); used in HCI MTTF
+};
+
 class GarnetNetwork : public Network
 {
   public:
     typedef GarnetNetworkParams Params;
     GarnetNetwork(const Params &p);
-    ~GarnetNetwork() = default;
+    ~GarnetNetwork();
 
     void init();
 
@@ -80,6 +91,19 @@ class GarnetNetwork : public Network
     uint32_t getBuffersPerDataVC() { return m_buffers_per_data_vc; }
     uint32_t getBuffersPerCtrlVC() { return m_buffers_per_ctrl_vc; }
     int getRoutingAlgorithm() const { return m_routing_algorithm; }
+
+    // RL accessors
+    Router*      getRouter(int id)      { return m_routers[id]; }
+    int          getLinkRLIndex(NetworkLink* lnk) const;
+
+    // RL agent interface
+    double getRLEpsilon()   const { return m_rl_epsilon; }
+    Cycles getRLWarmup()    const { return m_rl_warmup_cycles; }
+    std::vector<std::array<double, 2>>& getQTable() { return m_q_table; }
+
+    // Reproducible epsilon-greedy sampling via member RNG
+    double sampleRandom() { return m_real_dist(m_rng); }
+    int    sampleAction() { return m_action_dist(m_rng); }
 
     bool isFaultModelEnabled() const { return m_enable_fault_model; }
     FaultModel* fault_model;
@@ -157,6 +181,72 @@ class GarnetNetwork : public Network
     void update_traffic_distribution(RouteInfo route);
     int getNextPacketID() { return m_next_packet_id++; }
 
+    // Periodic wear/temperature state updates (called from RoutingUnit)
+    void maybeUpdateWearoutState(Cycles cur);
+
+    // MTTF computation helpers
+    double getRawEMMTTF(int rl_link_idx, int dst_router_id) const;
+    double getRawHCIMTTF(int router_id) const;
+    int    getCongBin(int router_id, int outport) const;  // sums over all vnets
+    int    getWearBin(double mttf_norm) const;
+    double computeCWeight(double x, double x_max, double x_min) const;
+
+    // Q-table persistence
+    void saveQTable() const;
+    void loadQTable();
+
+    // AF output at simulation end
+    void writeMTTFReport() const;
+
+    // Q-table indexing (public static so RoutingUnit can call it)
+    static const int RL_NUM_ACTIONS = 2;
+
+    static int wearStateIndex(int num_routers,
+                              int src, int dest,
+                              int whr, int whl,
+                              int wvr, int wvl,
+                              int ch,  int cv);
+
+    // RL hyperparameter constants
+    static constexpr double RL_ALPHA     = 0.1;
+    static constexpr double RL_GAMMA     = 0.95;
+    static constexpr double RL_W_WEAR    = 0.85;
+    static constexpr double RL_W_LAT     = 0.15;
+    static constexpr double RL_CLO_W     = 8.0;
+    static constexpr double RL_ALPHA_MIN = 1e-6;
+
+    // Failure-model constants
+    static constexpr double EA_EM    = 0.9;    // eV
+    static constexpr double EA_HCI   = 0.3;    // eV
+    static constexpr double HCI_N    = 1.5;
+    static constexpr double KB       = 8.617e-5; // eV/K
+
+    // I_sub technology constants
+    static constexpr double ISUB_VGS      = 1.0;
+    static constexpr double ISUB_VDS      = 1.0;
+    static constexpr double ISUB_ECR      = 4e6;
+    static constexpr double ISUB_TOX      = 1.2e-9;
+    static constexpr double ISUB_XJ       = 40e-9;
+    static constexpr double ISUB_C2       = 1.0;
+    static constexpr double ISUB_IDS      = 1e-4;
+    static constexpr double ISUB_PHI_I_EV = 3.7;   // eV (q cancels)
+    static constexpr double ISUB_LAMBDA_E = 9e-9;
+    static constexpr double ISUB_VTH0     = 0.179;
+    static constexpr double ISUB_LEFF0    = 14.4e-9;
+
+    // Process-variation parameters
+    static constexpr double PV_SIGMA_VTH_RAND  = 0.063;
+    static constexpr double PV_SIGMA_VTH_SYS   = 0.063;
+    static constexpr double PV_SIGMA_LEFF_RAND = 0.032;
+    static constexpr double PV_SIGMA_LEFF_SYS  = 0.032;
+    static constexpr double PV_PHI             = 0.5;
+
+    // Temperature map constants
+    static constexpr double TEMP_MIN_K  = 338.0;
+    static constexpr double TEMP_MAX_K  = 358.0;
+    static constexpr double TEMP_MEAN_K = 348.0;
+    static constexpr double TEMP_STD_K  = 3.3;  // 3σ ≈ ±10K → [338,358]K
+
   protected:
     // Configuration
     int m_num_rows;
@@ -214,6 +304,35 @@ class GarnetNetwork : public Network
     std::vector<CreditLink *> m_creditlinks; // All credit links in the network
     std::vector<NetworkInterface *> m_nis;   // All NI's in Network
     int m_next_packet_id; // static vairable for packet id allocation
+
+    // RL / wear-aware routing state
+    std::vector<RouterPVData>  m_router_pv;
+    std::vector<double>        m_router_temp_K;
+    std::vector<double>        m_router_util;       // windowed (per 1000 cyc)
+    std::vector<double>        m_router_util_prev;  // crossbar snapshot
+    std::vector<double>        m_link_util;         // windowed INT_ link util
+    std::vector<double>        m_link_util_prev;    // raw util snapshot
+
+    std::vector<NetworkLink*>              m_int_links;           // INT_ links only
+    std::vector<int>                       m_int_link_src_router; // src router per INT_ link
+    std::vector<int>                       m_int_link_dst_router; // dst router per INT_ link
+    std::unordered_map<NetworkLink*, int>  m_link_ptr_to_rl_idx;  // link* -> index in m_int_links
+
+    std::vector<double> m_chol_L; // N×N Cholesky L (row-major) for spatial correlation
+
+    Cycles      m_last_util_update;
+    Cycles      m_last_temp_update;
+    double      m_rl_epsilon;
+    Cycles      m_rl_warmup_cycles;
+    std::string m_qtable_file;
+    std::string m_mttf_output_file;
+
+    std::vector<std::array<double, RL_NUM_ACTIONS>> m_q_table;
+
+    // Seeded RNG for epsilon-greedy sampling (persists across routing decisions)
+    std::mt19937                         m_rng;
+    std::uniform_real_distribution<double> m_real_dist;
+    std::uniform_int_distribution<int>     m_action_dist;
 };
 
 inline std::ostream&

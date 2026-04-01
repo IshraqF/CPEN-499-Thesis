@@ -160,6 +160,9 @@ system.ruby.clk_domain = SrcClockDomain(
     clock=args.ruby_clock, voltage_domain=system.voltage_domain
 )
 
+for ruby_port in system.ruby._cpu_ports:
+    ruby_port.deadlock_threshold = 10000000  # 10M Ruby cycles (avoids false deadlock on long runs)
+
 i = 0
 for ruby_port in system.ruby._cpu_ports:
     #

@@ -158,6 +158,23 @@ Router::getInportDirection(int inport)
     return m_input_unit[inport]->get_direction();
 }
 
+// Count output VCs on `outport` for `vnet` that are NOT in IDLE state.
+// Used by GarnetNetwork::getCongBin().
+int
+Router::get_num_active_vcs(int outport, int vnet)
+{
+    OutputUnit* ou      = m_output_unit[outport].get();
+    int         vcs     = ou->getVcsPerVnet();
+    int         active  = 0;
+    Tick        curTick = clockEdge();
+    int         base    = vnet * vcs;
+    for (int vc = base; vc < base + vcs; vc++) {
+        if (!ou->is_vc_idle(vc, curTick))
+            active++;
+    }
+    return active;
+}
+
 int
 Router::route_compute(RouteInfo route, int inport, PortDirection inport_dirn)
 {

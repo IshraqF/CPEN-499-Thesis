@@ -113,6 +113,16 @@ class Router : public BasicRouter, public Consumer
 
     int getBitWidth() { return m_bit_width; }
 
+    // Passthrough to CrossbarSwitch live counter (not the Stats::Scalar)
+    double getCrossbarActivity() { return crossbarSwitch.get_crossbar_activity(); }
+
+    // Returns outport index for a port direction (delegates to RoutingUnit)
+    int get_outport_idx(PortDirection dirn)
+    { return routingUnit.getOutportIdx(dirn); }
+
+    // Count non-idle output VCs for a given outport and vnet
+    int get_num_active_vcs(int outport, int vnet);
+
     PortDirection getOutportDirection(int outport);
     PortDirection getInportDirection(int inport);
 

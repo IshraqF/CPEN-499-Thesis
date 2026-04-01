@@ -82,6 +82,14 @@ class RoutingUnit
     // of vnets or if the vector supports all vnets.
     bool supportsVnet(int vnet, std::vector<int> sVnets);
 
+    // Returns outport index for a direction, or -1 if not found.
+    // Used by Router::get_outport_idx() and RL s' construction.
+    int getOutportIdx(PortDirection dirn)
+    {
+        auto it = m_outports_dirn2idx.find(dirn);
+        return (it != m_outports_dirn2idx.end()) ? it->second : -1;
+    }
+
 
   private:
     Router *m_router;
