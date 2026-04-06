@@ -93,6 +93,11 @@ InputUnit::wakeup()
             assert(virtualChannels[vc].get_state() == IDLE_);
             set_vc_active(vc, curTick());
 
+            // Stamp global VC into RouteInfo so routing algorithms can read it
+            RouteInfo route = t_flit->get_route();
+            route.vc = vc;
+            t_flit->set_route(route);
+
             // Route computation for this vc
             int outport = m_router->route_compute(t_flit->get_route(),
                 m_id, m_direction);

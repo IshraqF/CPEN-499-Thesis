@@ -81,7 +81,7 @@ GarnetNetwork::GarnetNetwork(const Params &p)
     // RL initialisation from params
     m_rl_epsilon       = p.rl_epsilon;
     m_rl_warmup_cycles = Cycles(p.rl_warmup_cycles);
-    m_qtable_file      = p.qtable_file;
+    m_lare_theta_file  = p.lare_theta_file;
     m_mttf_output_file = p.mttf_output_file;
     m_last_util_update = Cycles(0);
     m_last_temp_update = Cycles(0);
@@ -128,7 +128,7 @@ GarnetNetwork::GarnetNetwork(const Params &p)
 
 GarnetNetwork::~GarnetNetwork()
 {
-    saveQTable();
+    saveLARETheta();
     writeMTTFReport();
 }
 
@@ -318,12 +318,18 @@ GarnetNetwork::init()
             }
         }
 
-        // --- Allocate and (optionally) load Q-table (RL runs only) ---
+        // --- Allocate and (optionally) load LARE theta (RL runs only) ---
         if (m_routing_algorithm == (int)CUSTOM_) {
-            int num_routers = m_routers.size();
-            int rl_num_states = num_routers * num_routers * 729; // 3^6
-            m_q_table.assign(rl_num_states, {0.0, 0.0});
-            loadQTable();
+            int num_routers = (int)m_routers.size();
+            // Size second dimension to max outports across all routers
+            // (up to 5 in an 8×8 mesh: Local + E + W + N + S)
+            int max_outports = 0;
+            for (auto r : m_routers)
+                max_outports = std::max(max_outports, r->get_num_outports());
+            m_lare_theta.assign(num_routers,
+                std::vector<std::vector<double>>(max_outports,
+                    std::vector<double>(LARE_NUM_FEATURES, 1.0)));
+            loadLARETheta();
         }
     }
 
@@ -331,7 +337,7 @@ GarnetNetwork::init()
     // gem5 exits via Python (not C++ stack unwind), so the destructor is
     // unreliable; registerExitCallback guarantees these run at sim end.
     registerExitCallback([this]() {
-        saveQTable();
+        saveLARETheta();
         writeMTTFReport();
     });
 }
@@ -682,73 +688,59 @@ GarnetNetwork::computeCWeight(double x,
     return num / den;
 }
 
-// Encode the 8-component RL state into a flat index.
-// num_routers: total routers in the network (e.g. 16 for 4x4, 64 for 8x8)
-// src, dest : router IDs 0..num_routers-1   (factor num_routers each)
-// whr,whl,wvr,wvl : wear bins 0..2  (factor 3 each)
-// ch, cv    : congestion bins 0..2  (factor 3 each)
-// Total: num_routers * num_routers * 3^6
-int
-GarnetNetwork::wearStateIndex(int num_routers,
-                               int src, int dest,
-                               int whr, int whl,
-                               int wvr, int wvl,
-                               int ch,  int cv)
-{
-    int idx = src;
-    idx = idx * num_routers + dest;
-    idx = idx * 3  + whr;
-    idx = idx * 3  + whl;
-    idx = idx * 3  + wvr;
-    idx = idx * 3  + wvl;
-    idx = idx * 3  + ch;
-    idx = idx * 3  + cv;
-    return idx;
-}
-
 void
-GarnetNetwork::saveQTable() const
+GarnetNetwork::saveLARETheta() const
 {
-    if (m_qtable_file.empty() || m_q_table.empty()) return;
-    std::ofstream f(m_qtable_file, std::ios::binary);
+    if (m_lare_theta_file.empty() || m_lare_theta.empty()) return;
+    std::ofstream f(m_lare_theta_file, std::ios::binary);
     if (!f) {
-        warn("GarnetNetwork: cannot open '%s' for Q-table write\n",
-             m_qtable_file.c_str());
+        warn("GarnetNetwork: cannot open '%s' for LARE theta write\n",
+             m_lare_theta_file.c_str());
         return;
     }
-    // Header: one double storing epsilon (for reference; not used on load)
+    // Header: epsilon for reference
     f.write(reinterpret_cast<const char*>(&m_rl_epsilon), sizeof(double));
-    // Body: flat array of NUM_STATES × 2 doubles
-    for (const auto& row : m_q_table) {
-        f.write(reinterpret_cast<const char*>(row.data()),
-                sizeof(double) * RL_NUM_ACTIONS);
-    }
-    inform("GarnetNetwork: Q-table saved to '%s'\n",
-           m_qtable_file.c_str());
+    // Body: [num_routers][max_outports][LARE_NUM_FEATURES] doubles
+    for (const auto& router_theta : m_lare_theta)
+        for (const auto& outport_theta : router_theta)
+            f.write(reinterpret_cast<const char*>(outport_theta.data()),
+                    sizeof(double) * LARE_NUM_FEATURES);
+    inform("GarnetNetwork: LARE theta saved to '%s'\n",
+           m_lare_theta_file.c_str());
 }
 
 void
-GarnetNetwork::loadQTable()
+GarnetNetwork::loadLARETheta()
 {
-    if (m_qtable_file.empty()) return;
-    std::ifstream f(m_qtable_file, std::ios::binary);
+    if (m_lare_theta_file.empty()) return;
+    std::ifstream f(m_lare_theta_file, std::ios::binary);
     if (!f) {
-        // Silent: start fresh when file does not exist
-        inform("GarnetNetwork: Q-table file '%s' not found, starting fresh\n",
-               m_qtable_file.c_str());
+        inform("GarnetNetwork: LARE theta file '%s' not found, starting fresh\n",
+               m_lare_theta_file.c_str());
         return;
     }
-    // Skip stored epsilon — rl_epsilon always comes from the param
     double stored_eps;
     f.read(reinterpret_cast<char*>(&stored_eps), sizeof(double));
-    // Read Q-values
-    for (auto& row : m_q_table) {
-        f.read(reinterpret_cast<char*>(row.data()),
-               sizeof(double) * RL_NUM_ACTIONS);
-    }
-    inform("GarnetNetwork: Q-table loaded from '%s' "
+    for (auto& router_theta : m_lare_theta)
+        for (auto& outport_theta : router_theta)
+            f.read(reinterpret_cast<char*>(outport_theta.data()),
+                   sizeof(double) * LARE_NUM_FEATURES);
+    inform("GarnetNetwork: LARE theta loaded from '%s' "
            "(epsilon=%.3f from param)\n",
-           m_qtable_file.c_str(), m_rl_epsilon);
+           m_lare_theta_file.c_str(), m_rl_epsilon);
+}
+
+double
+GarnetNetwork::computeQLARE(int router_id, int outport_idx,
+                             const std::vector<double>& features) const
+{
+    assert(router_id   < (int)m_lare_theta.size());
+    assert(outport_idx < (int)m_lare_theta[router_id].size());
+    const auto& theta = m_lare_theta[router_id][outport_idx];
+    double q = 0.0;
+    for (int j = 0; j < LARE_NUM_FEATURES; j++)
+        q += theta[j] * features[j];
+    return q;
 }
 
 // Writes per-component proportional MTTF values to the configured output file.

@@ -297,7 +297,11 @@ SwitchAllocator::send_allowed(int inport, int invc, int outport, int outvc)
         // needs outvc
         // this is only true for HEAD and HEAD_TAIL flits.
 
-        if (output_unit->has_free_vc(vnet)) {
+        bool has_free_eligible_vc = useEscapeVcPolicy() ?
+            has_free_vc_for_invc(output_unit, invc) :
+            output_unit->has_free_vc(vnet);
+
+        if (has_free_eligible_vc) {
 
             has_outvc = true;
 
@@ -341,14 +345,79 @@ SwitchAllocator::send_allowed(int inport, int invc, int outport, int outvc)
 int
 SwitchAllocator::vc_allocate(int outport, int inport, int invc)
 {
-    // Select a free VC from the output port
-    int outvc =
-        m_router->getOutputUnit(outport)->select_free_vc(get_vnet(invc));
+    auto output_unit = m_router->getOutputUnit(outport);
+    int outvc = useEscapeVcPolicy() ?
+        select_free_vc_for_invc(output_unit, invc) :
+        output_unit->select_free_vc(get_vnet(invc));
 
     // has to get a valid VC since it checked before performing SA
     assert(outvc != -1);
     m_router->getInputUnit(inport)->grant_outvc(invc, outvc);
     return outvc;
+}
+
+bool
+SwitchAllocator::useEscapeVcPolicy() const
+{
+    RoutingAlgorithm routing_algorithm =
+        (RoutingAlgorithm)m_router->get_net_ptr()->getRoutingAlgorithm();
+    return (routing_algorithm == CUSTOM_) && (m_vc_per_vnet > 1);
+}
+
+bool
+SwitchAllocator::has_free_vc_for_invc(OutputUnit *output_unit, int invc) const
+{
+    int vnet = invc / m_vc_per_vnet;
+    assert(vnet < m_router->get_num_vnets());
+    int vc_base = vnet * m_vc_per_vnet;
+    int local_vc = invc % m_vc_per_vnet;
+
+    // Escape class: stay in VC0 only.
+    if (local_vc == 0) {
+        return output_unit->is_vc_idle(vc_base, curTick());
+    }
+
+    // Adaptive class: prefer non-escape VCs; if none are available,
+    // allow one-way downgrade to escape VC0.
+    for (int vc = vc_base + 1; vc < vc_base + m_vc_per_vnet; vc++) {
+        if (output_unit->is_vc_idle(vc, curTick())) {
+            return true;
+        }
+    }
+    return output_unit->is_vc_idle(vc_base, curTick());
+}
+
+int
+SwitchAllocator::select_free_vc_for_invc(OutputUnit *output_unit, int invc)
+{
+    int vnet = invc / m_vc_per_vnet;
+    assert(vnet < m_router->get_num_vnets());
+    int vc_base = vnet * m_vc_per_vnet;
+    int local_vc = invc % m_vc_per_vnet;
+
+    // Escape class: stay in VC0 only.
+    if (local_vc == 0) {
+        if (output_unit->is_vc_idle(vc_base, curTick())) {
+            output_unit->set_vc_state(ACTIVE_, vc_base, curTick());
+            return vc_base;
+        }
+        return -1;
+    }
+
+    // Adaptive class: non-escape first.
+    for (int vc = vc_base + 1; vc < vc_base + m_vc_per_vnet; vc++) {
+        if (output_unit->is_vc_idle(vc, curTick())) {
+            output_unit->set_vc_state(ACTIVE_, vc, curTick());
+            return vc;
+        }
+    }
+
+    // One-way downgrade to escape VC.
+    if (output_unit->is_vc_idle(vc_base, curTick())) {
+        output_unit->set_vc_state(ACTIVE_, vc_base, curTick());
+        return vc_base;
+    }
+    return -1;
 }
 
 // Wakeup the router next cycle to perform SA again

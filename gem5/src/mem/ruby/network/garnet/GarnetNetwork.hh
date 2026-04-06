@@ -99,7 +99,7 @@ class GarnetNetwork : public Network
     // RL agent interface
     double getRLEpsilon()   const { return m_rl_epsilon; }
     Cycles getRLWarmup()    const { return m_rl_warmup_cycles; }
-    std::vector<std::array<double, 2>>& getQTable() { return m_q_table; }
+    std::vector<std::vector<std::vector<double>>>& getLARETheta() { return m_lare_theta; }
 
     // Reproducible epsilon-greedy sampling via member RNG
     double sampleRandom() { return m_real_dist(m_rng); }
@@ -191,27 +191,26 @@ class GarnetNetwork : public Network
     int    getWearBin(double mttf_norm) const;
     double computeCWeight(double x, double x_max, double x_min) const;
 
-    // Q-table persistence
-    void saveQTable() const;
-    void loadQTable();
+    // LARE coefficient persistence
+    void saveLARETheta() const;
+    void loadLARETheta();
+
+    // LARE Q-value: dot product theta[router_id][outport_idx] · features
+    double computeQLARE(int router_id, int outport_idx,
+                        const std::vector<double>& features) const;
 
     // AF output at simulation end
     void writeMTTFReport() const;
 
-    // Q-table indexing (public static so RoutingUnit can call it)
-    static const int RL_NUM_ACTIONS = 2;
-
-    static int wearStateIndex(int num_routers,
-                              int src, int dest,
-                              int whr, int whl,
-                              int wvr, int wvl,
-                              int ch,  int cv);
+    // LARE dimensionality constant
+    static const int LARE_NUM_FEATURES = 9;
 
     // RL hyperparameter constants
     static constexpr double RL_ALPHA     = 0.1;
     static constexpr double RL_GAMMA     = 0.95;
-    static constexpr double RL_W_WEAR    = 0.85;
+    static constexpr double RL_W_WEAR    = 0.7;
     static constexpr double RL_W_LAT     = 0.15;
+    static constexpr double RL_W_BALANCE = 0.15;
     static constexpr double RL_CLO_W     = 8.0;
     static constexpr double RL_ALPHA_MIN = 1e-6;
 
@@ -324,10 +323,12 @@ class GarnetNetwork : public Network
     Cycles      m_last_temp_update;
     double      m_rl_epsilon;
     Cycles      m_rl_warmup_cycles;
-    std::string m_qtable_file;
+    std::string m_lare_theta_file;
     std::string m_mttf_output_file;
 
-    std::vector<std::array<double, RL_NUM_ACTIONS>> m_q_table;
+    // [router_id][outport_idx][feature_idx], initialized to 1.0
+    // Second dim sized to max outports across all routers (≤5 for an 8×8 mesh)
+    std::vector<std::vector<std::vector<double>>> m_lare_theta;
 
     // Seeded RNG for epsilon-greedy sampling (persists across routing decisions)
     std::mt19937                         m_rng;

@@ -56,12 +56,13 @@ enum RoutingAlgorithm { TABLE_ = 0, XY_ = 1, CUSTOM_ = 2,
 struct RouteInfo
 {
     RouteInfo()
-        : vnet(0), src_ni(0), src_router(0), dest_ni(0), dest_router(0),
-          hops_traversed(0)
+        : vnet(0), vc(0), src_ni(0), src_router(0), dest_ni(0),
+          dest_router(0), hops_traversed(0)
     {}
 
     // destination format for table-based routing
     int vnet;
+    int vc;             // global VC index; stamped by InputUnit at route-compute time
     NetDest net_dest;
 
     // src and dest format for topology-specific routing

@@ -280,12 +280,12 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
     Cycles cur = m_router->curCycle();
 
     // ----------------------------------------------------------------
-    // Step 1: trigger periodic utilisation and temperature updates
+    // Step 1: periodic utilisation / temperature updates
     // ----------------------------------------------------------------
     net->maybeUpdateWearoutState(cur);
 
     // ----------------------------------------------------------------
-    // Step 2: coordinates
+    // Step 2: grid coordinates
     // ----------------------------------------------------------------
     int num_cols = net->getNumCols();
     int my_id    = m_router->get_id();
@@ -297,156 +297,183 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
     int dx = dest_x - my_x;
     int dy = dest_y - my_y;
 
+    // Deterministic dimension-order (x then y) next-hop selection.
+    // This keeps fallback routing deadlock-safe without requiring XY's
+    // strict inport-direction assertions, which may not hold after
+    // earlier adaptive turns.
+    auto dimOrderOutport = [&]() -> int {
+        if (dx == 0 && dy == 0) {
+            return m_outports_dirn2idx.at("Local");
+        }
+        if (dx != 0) {
+            PortDirection dirn = (dx > 0) ? "East" : "West";
+            return m_outports_dirn2idx.at(dirn);
+        }
+        PortDirection dirn = (dy > 0) ? "North" : "South";
+        return m_outports_dirn2idx.at(dirn);
+    };
+
     // ----------------------------------------------------------------
-    // Step 3: warmup — fall back to XY (no Q-update)
+    // Step 3: warmup — fall back to deterministic dimension-order
     // ----------------------------------------------------------------
     if (cur < net->getRLWarmup()) {
-        return outportComputeXY(route, inport, inport_dirn);
+        return dimOrderOutport();
     }
 
     // ----------------------------------------------------------------
     // Step 4: forced routing when only one dimension remains
-    // No Q-table involvement; deadlock freedom maintained by XY.
-    // NOTE: cannot call outportComputeXY here — it asserts inport_dirn
-    // is "Local" or "East", which is not true for all inport directions.
     // ----------------------------------------------------------------
-    bool need_h = (dx != 0);
-    bool need_v = (dy != 0);
-    if (!need_h && !need_v) {
-        return m_outports_dirn2idx.at("Local");
+    if (dx == 0 && dy == 0) {
+        return dimOrderOutport();
     }
-    if (!need_h) {
-        PortDirection dirn = (dy > 0) ? "North" : "South";
-        return m_outports_dirn2idx.at(dirn);
+    if (dx == 0) {
+        return dimOrderOutport();
     }
-    if (!need_v) {
-        PortDirection dirn = (dx > 0) ? "East" : "West";
-        return m_outports_dirn2idx.at(dirn);
+    if (dy == 0) {
+        return dimOrderOutport();
     }
 
     // ----------------------------------------------------------------
-    // Step 5: candidate directions and neighbour IDs
+    // Step 5: escape VC check — VC 0 within its vnet uses deterministic
+    // dimension-order routing.
+    // ----------------------------------------------------------------
+    int vcs_per_vnet = (int)m_router->get_vc_per_vnet();
+    int local_vc     = route.vc % vcs_per_vnet;
+    if (local_vc == 0) {
+        return dimOrderOutport();
+    }
+
+    // ----------------------------------------------------------------
+    // Step 6: candidate directions and neighbour IDs
     // ----------------------------------------------------------------
     PortDirection h_dirn   = (dx > 0) ? "East"  : "West";
     PortDirection v_dirn   = (dy > 0) ? "North" : "South";
-    int h_next_id = my_id + ((dx > 0) ?  1          :  -1);
-    int v_next_id = my_id + ((dy > 0) ?  num_cols   : -num_cols);
+    int h_next_id = my_id + ((dx > 0) ?  1         :  -1);
+    int v_next_id = my_id + ((dy > 0) ?  num_cols  : -num_cols);
 
     int h_outport = m_outports_dirn2idx.at(h_dirn);
     int v_outport = m_outports_dirn2idx.at(v_dirn);
 
     // ----------------------------------------------------------------
-    // Step 6: link RL indices (for windowed utilisation lookup)
+    // Step 7: raw MTTF values for both candidates
     // ----------------------------------------------------------------
     NetworkLink* h_link = m_router->getOutputUnit(h_outport)->get_out_link();
     NetworkLink* v_link = m_router->getOutputUnit(v_outport)->get_out_link();
     int h_rl = net->getLinkRLIndex(h_link);
     int v_rl = net->getLinkRLIndex(v_link);
 
-    // ----------------------------------------------------------------
-    // Step 7: raw proportional MTTF for both candidates
-    // ----------------------------------------------------------------
     double h_em  = net->getRawEMMTTF(h_rl, h_next_id);
     double h_hci = net->getRawHCIMTTF(h_next_id);
     double v_em  = net->getRawEMMTTF(v_rl, v_next_id);
     double v_hci = net->getRawHCIMTTF(v_next_id);
 
-    // ----------------------------------------------------------------
-    // Step 8: normalise across both candidates
-    // ----------------------------------------------------------------
-    double em_max  = std::max(h_em,  v_em);
-    double hci_max = std::max(h_hci, v_hci);
-    double h_em_norm  = (em_max  > 0.0) ? h_em  / em_max  : 1.0;
-    double v_em_norm  = (em_max  > 0.0) ? v_em  / em_max  : 1.0;
-    double h_hci_norm = (hci_max > 0.0) ? h_hci / hci_max : 1.0;
-    double v_hci_norm = (hci_max > 0.0) ? v_hci / hci_max : 1.0;
+    double em_max   = std::max(h_em,  v_em);
+    double hci_max  = std::max(h_hci, v_hci);
+    double h_em_n   = (em_max  > 0.0) ? h_em  / em_max  : 1.0;
+    double v_em_n   = (em_max  > 0.0) ? v_em  / em_max  : 1.0;
+    double h_hci_n  = (hci_max > 0.0) ? h_hci / hci_max : 1.0;
+    double v_hci_n  = (hci_max > 0.0) ? v_hci / hci_max : 1.0;
 
     // ----------------------------------------------------------------
-    // Step 9: Clotho exponential weighting C(MTTF_norm)
-    // ----------------------------------------------------------------
-    double c_h_em  = net->computeCWeight(h_em_norm,
-                         std::max(h_em_norm,  v_em_norm),
-                         std::min(h_em_norm,  v_em_norm));
-    double c_v_em  = net->computeCWeight(v_em_norm,
-                         std::max(h_em_norm,  v_em_norm),
-                         std::min(h_em_norm,  v_em_norm));
-    double c_h_hci = net->computeCWeight(h_hci_norm,
-                         std::max(h_hci_norm, v_hci_norm),
-                         std::min(h_hci_norm, v_hci_norm));
-    double c_v_hci = net->computeCWeight(v_hci_norm,
-                         std::max(h_hci_norm, v_hci_norm),
-                         std::min(h_hci_norm, v_hci_norm));
-
-    // ----------------------------------------------------------------
-    // Step 10: combined MTTF score for each candidate direction
-    // ----------------------------------------------------------------
-    double mttf_h = c_h_em * h_em_norm + c_h_hci * h_hci_norm;
-    double mttf_v = c_v_em * v_em_norm + c_v_hci * v_hci_norm;
-
-    // ----------------------------------------------------------------
-    // Step 11: congestion bins for current router's outports (all vnets)
+    // Step 8: congestion bins for both outports
     // ----------------------------------------------------------------
     int cong_h = net->getCongBin(my_id, h_outport);
     int cong_v = net->getCongBin(my_id, v_outport);
 
     // ----------------------------------------------------------------
-    // Step 12: construct current state s
-    // Wear bins: HCI first, then EM (matches Part 3 table ordering)
+    // Step 9: encode current inport direction for f8
+    // Local=0, West=1, East=2, South=3, North=4; divide by 4
     // ----------------------------------------------------------------
-    int num_routers = net->getNumRows() * net->getNumCols();
-    int s = GarnetNetwork::wearStateIndex(
-                num_routers,
-                route.src_router, dest_id,
-                net->getWearBin(h_hci_norm), net->getWearBin(h_em_norm),
-                net->getWearBin(v_hci_norm), net->getWearBin(v_em_norm),
-                cong_h, cong_v);
+    double inport_enc = 0.0;
+    if      (inport_dirn == "West")  inport_enc = 1.0 / 4.0;
+    else if (inport_dirn == "East")  inport_enc = 2.0 / 4.0;
+    else if (inport_dirn == "South") inport_enc = 3.0 / 4.0;
+    else if (inport_dirn == "North") inport_enc = 4.0 / 4.0;
 
     // ----------------------------------------------------------------
-    // Step 13: epsilon-greedy action selection
-    // Uses net->sampleRandom() / sampleAction() backed by m_rng (seed=12345)
-    // for reproducibility across runs with identical traffic patterns.
+    // Step 10: grid constants for normalization
     // ----------------------------------------------------------------
-    auto& qtable  = net->getQTable();
-    double eps    = net->getRLEpsilon();
-    int action;
+    int num_routers  = net->getNumRows() * net->getNumCols();
+    double id_range  = (double)(num_routers - 1);
+    double max_hops  = (double)(net->getNumRows() + net->getNumCols() - 2);
+
+    int rem_hops = std::abs(dx) + std::abs(dy);
+
+    // ----------------------------------------------------------------
+    // Step 11: build feature vectors for current state
+    // ----------------------------------------------------------------
+    auto buildFeatures = [&](double em_n, double hci_n, int cong) {
+        std::vector<double> f(GarnetNetwork::LARE_NUM_FEATURES);
+        f[0] = 1.0;
+        f[1] = (id_range > 0.0) ? (double)dest_id / id_range : 0.0;
+        f[2] = (id_range > 0.0) ? (double)my_id   / id_range : 0.0;
+        f[3] = (max_hops > 0.0) ? (double)route.hops_traversed / max_hops : 0.0;
+        f[4] = (max_hops > 0.0) ? (double)rem_hops             / max_hops : 0.0;
+        f[5] = em_n;
+        f[6] = hci_n;
+        f[7] = (double)cong / 2.0;
+        f[8] = inport_enc;
+        return f;
+    };
+
+    std::vector<double> feat_h = buildFeatures(h_em_n, h_hci_n, cong_h);
+    std::vector<double> feat_v = buildFeatures(v_em_n, v_hci_n, cong_v);
+
+    // ----------------------------------------------------------------
+    // Step 12: compute Q-values and epsilon-greedy action selection
+    // ----------------------------------------------------------------
+    double q_h = net->computeQLARE(my_id, h_outport, feat_h);
+    double q_v = net->computeQLARE(my_id, v_outport, feat_v);
+
+    double eps = net->getRLEpsilon();
+    int action;   // 0 = horizontal, 1 = vertical
     if (eps > 0.0 && net->sampleRandom() < eps) {
-        action = net->sampleAction();  // explore: seeded random action
+        action = net->sampleAction();
     } else {
-        action = (qtable[s][0] >= qtable[s][1]) ? 0 : 1;  // exploit
+        action = (q_h >= q_v) ? 0 : 1;
     }
 
-    int chosen_outport  = (action == 0) ? h_outport : v_outport;
-    int chosen_next_id  = (action == 0) ? h_next_id : v_next_id;
-    double mttf_chosen  = (action == 0) ? mttf_h    : mttf_v;
-    int    cong_chosen  = (action == 0) ? cong_h    : cong_v;
+    int           chosen_outport = (action == 0) ? h_outport : v_outport;
+    int           chosen_next_id = (action == 0) ? h_next_id : v_next_id;
+    double        chosen_em_n    = (action == 0) ? h_em_n    : v_em_n;
+    double        chosen_hci_n   = (action == 0) ? h_hci_n   : v_hci_n;
+    int           chosen_cong    = (action == 0) ? cong_h    : cong_v;
+    double        chosen_q_s     = (action == 0) ? q_h       : q_v;
+    PortDirection chosen_dirn    = (action == 0) ? h_dirn    : v_dirn;
 
     // ----------------------------------------------------------------
-    // Step 14: per-hop reward
+    // Step 13: reward
     // ----------------------------------------------------------------
-    double R = GarnetNetwork::RL_W_WEAR * mttf_chosen
-             - GarnetNetwork::RL_W_LAT  * (cong_chosen / 2.0);
+    double c_em  = net->computeCWeight(chosen_em_n,
+                       std::max(h_em_n, v_em_n), std::min(h_em_n, v_em_n));
+    double c_hci = net->computeCWeight(chosen_hci_n,
+                       std::max(h_hci_n, v_hci_n), std::min(h_hci_n, v_hci_n));
+    double mttf_score = c_em * chosen_em_n + c_hci * chosen_hci_n;
+    double cong_norm  = (double)chosen_cong / 2.0;
+
+    double R = GarnetNetwork::RL_W_WEAR    * mttf_score
+             - GarnetNetwork::RL_W_LAT     * cong_norm
+             + GarnetNetwork::RL_W_BALANCE * (1.0 - cong_norm);
 
     // ----------------------------------------------------------------
-    // Step 15: Q-update (training mode only, after warmup)
-    // Standard online Q-learning; update occurs at every routing decision.
+    // Step 14: LARE coefficient update
     // ----------------------------------------------------------------
     if (eps > 0.0) {
-        // --- Construct s' at the next router ---
-        int  next_id = chosen_next_id;
-        int  nx      = next_id % num_cols;
-        int  ny      = next_id / num_cols;
-        int  ndx     = dest_x - nx;
-        int  ndy     = dest_y - ny;
-        bool terminal        = (next_id == dest_id);
-        bool forced_at_next  = (!terminal && (ndx == 0 || ndy == 0));
+        int  next_id  = chosen_next_id;
+        int  nx       = next_id % num_cols;
+        int  ny       = next_id / num_cols;
+        int  ndx      = dest_x - nx;
+        int  ndy      = dest_y - ny;
+        bool terminal = (next_id == dest_id);
+        bool forced   = !terminal && (ndx == 0 || ndy == 0);
 
-        double q_next_max = 0.0;
+        double q_sp = 0.0;
 
-        if (!terminal && !forced_at_next) {
-            PortDirection nh_dirn = (ndx > 0) ? "East"  : "West";
-            PortDirection nv_dirn = (ndy > 0) ? "North" : "South";
-            int nh_next_id = next_id + ((ndx > 0) ?  1         :  -1);
-            int nv_next_id = next_id + ((ndy > 0) ?  num_cols  : -num_cols);
+        if (!terminal && !forced) {
+            PortDirection nh_dirn  = (ndx > 0) ? "East"  : "West";
+            PortDirection nv_dirn  = (ndy > 0) ? "North" : "South";
+            int nh_next_id = next_id + ((ndx > 0) ?  1        :  -1);
+            int nv_next_id = next_id + ((ndy > 0) ?  num_cols : -num_cols);
 
             Router* nr  = net->getRouter(next_id);
             int nh_op   = nr->get_outport_idx(nh_dirn);
@@ -472,21 +499,47 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
             int nc_h = net->getCongBin(next_id, nh_op);
             int nc_v = net->getCongBin(next_id, nv_op);
 
-            int s_prime = GarnetNetwork::wearStateIndex(
-                              num_routers,
-                              route.src_router, dest_id,
-                              net->getWearBin(nh_hci_n), net->getWearBin(nh_em_n),
-                              net->getWearBin(nv_hci_n), net->getWearBin(nv_em_n),
-                              nc_h, nc_v);
+            int nrem_hops = std::abs(ndx) + std::abs(ndy);
 
-            q_next_max = std::max(qtable[s_prime][0], qtable[s_prime][1]);
+            // Inport direction at next router = opposite of chosen direction
+            double sp_inport_enc = 0.0;
+            if      (chosen_dirn == "East")  sp_inport_enc = 1.0 / 4.0;  // arrived from West
+            else if (chosen_dirn == "West")  sp_inport_enc = 2.0 / 4.0;  // arrived from East
+            else if (chosen_dirn == "North") sp_inport_enc = 3.0 / 4.0;  // arrived from South
+            else if (chosen_dirn == "South") sp_inport_enc = 4.0 / 4.0;  // arrived from North
+
+            auto buildFeatSp = [&](double en, double hn, int cg) {
+                std::vector<double> f(GarnetNetwork::LARE_NUM_FEATURES);
+                f[0] = 1.0;
+                f[1] = (id_range > 0.0) ? (double)dest_id  / id_range : 0.0;
+                f[2] = (id_range > 0.0) ? (double)next_id  / id_range : 0.0;
+                f[3] = (max_hops > 0.0)
+                       ? (double)(route.hops_traversed + 1) / max_hops : 0.0;
+                f[4] = (max_hops > 0.0) ? (double)nrem_hops / max_hops : 0.0;
+                f[5] = en;
+                f[6] = hn;
+                f[7] = (double)cg / 2.0;
+                f[8] = sp_inport_enc;
+                return f;
+            };
+
+            std::vector<double> feat_nh = buildFeatSp(nh_em_n, nh_hci_n, nc_h);
+            std::vector<double> feat_nv = buildFeatSp(nv_em_n, nv_hci_n, nc_v);
+
+            double q_nh = net->computeQLARE(next_id, nh_op, feat_nh);
+            double q_nv = net->computeQLARE(next_id, nv_op, feat_nv);
+            q_sp = std::max(q_nh, q_nv);
         }
-        // terminal and forced_at_next cases: q_next_max remains 0.0
 
-        double alpha = GarnetNetwork::RL_ALPHA;
-        double gamma = GarnetNetwork::RL_GAMMA;
-        qtable[s][action] +=
-            alpha * (R + gamma * q_next_max - qtable[s][action]);
+        double alpha    = GarnetNetwork::RL_ALPHA;
+        double gamma    = GarnetNetwork::RL_GAMMA;
+        double td_error = R + gamma * q_sp - chosen_q_s;
+
+        auto& theta = net->getLARETheta()[my_id][chosen_outport];
+        const auto& feat_chosen = (action == 0) ? feat_h : feat_v;
+        for (int j = 0; j < GarnetNetwork::LARE_NUM_FEATURES; j++) {
+            theta[j] += alpha * td_error * feat_chosen[j];
+        }
     }
 
     return chosen_outport;

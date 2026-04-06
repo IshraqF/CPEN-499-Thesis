@@ -117,11 +117,11 @@ def define_options(parser):
         help="network-level deadlock threshold.",
     )
     parser.add_argument(
-        "--qtable-file",
+        "--lare-theta-file",
         action="store",
         type=str,
         default="",
-        help="path to Q-table binary file; empty = do not load/save",
+        help="path to LARE theta binary file; empty = do not load/save",
     )
     parser.add_argument(
         "--rl-epsilon",
@@ -135,7 +135,7 @@ def define_options(parser):
         action="store",
         type=int,
         default=300000,
-        help="cycles before Q-table updates begin",
+        help="cycles before LARE coefficient updates begin",
     )
     parser.add_argument(
         "--mttf-output-file",
@@ -200,7 +200,7 @@ def init_network(options, network, InterfaceClass):
         network.ni_flit_size = options.link_width_bits / 8
         network.routing_algorithm = options.routing_algorithm
         network.garnet_deadlock_threshold = options.garnet_deadlock_threshold
-        network.qtable_file      = options.qtable_file
+        network.lare_theta_file  = options.lare_theta_file
         network.rl_epsilon       = options.rl_epsilon
         network.rl_warmup_cycles = options.rl_warmup_cycles
         network.mttf_output_file = options.mttf_output_file
