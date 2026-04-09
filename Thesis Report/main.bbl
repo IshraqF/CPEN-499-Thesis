@@ -1,0 +1,131 @@
+\begin{thebibliography}{10}
+
+\bibitem{Dally2001}
+W.J. Dally and B.~Towles.
+\newblock Route packets, not wires: on-chip interconnection networks.
+\newblock In {\em Proceedings of the 38th Design Automation Conference (IEEE
+  Cat. No.01CH37232)}, pages 684--689, 2001.
+
+\bibitem{Clotho2015}
+Arseniy Vitkovskiy, Vassos Soteriou, and Paul~V. Gratz.
+\newblock Clotho: Proactive wearout deceleration in chip-multiprocessor
+  interconnects.
+\newblock In {\em 2015 33rd IEEE International Conference on Computer Design
+  (ICCD)}, pages 117--124, 2015.
+
+\bibitem{Adnan2025}
+Muhammad Adnan, Muhammad~Akmal Chaudary, Muhammad~Moazzam Ali, Hafiz~Ayaan
+  Aatif, Muhammad~Ibrahim Raza, and Hafiz~Arslan Ramzan.
+\newblock Fault-tolerant adaptive routing in nocs: Machine learning approaches
+  for resilient on-chip networks.
+\newblock In {\em 2025 International Conference on Artificial Intelligence,
+  Computer, Data Sciences and Applications (ACDSA)}, pages 1--7, 2025.
+
+\bibitem{Samala2020}
+Jagadheesh Samala, Harshvardhan Takawale, Yash Chokhani, P.~Veda Bhanu, and
+  Soumya J.
+\newblock Fault-tolerant routing algorithm for mesh based noc using
+  reinforcement learning.
+\newblock In {\em 2020 24th International Symposium on VLSI Design and Test
+  (VDAT)}, pages 1--6, 2020.
+
+\bibitem{Samala2022}
+Samala Jagadheesh, P.~Veda Bhanu, J.~Soumya, and Linga~Reddy Cenkeramaddi.
+\newblock Reinforcement learning based fault-tolerant routing algorithm for
+  mesh based noc and its fpga implementation.
+\newblock {\em IEEE Access}, 10:44724--44737, 2022.
+
+\bibitem{AROMa2018}
+Zana Ghaderi, Ayed Alqahtani, and Nader Bagherzadeh.
+\newblock Aroma: Aging-aware deadlock-free adaptive routing algorithm and
+  online monitoring in 3d nocs.
+\newblock {\em IEEE Transactions on Parallel and Distributed Systems},
+  29(4):772--788, 2018.
+
+\bibitem{Kondoth2026}
+Lashmi Kondoth, Rajan Shankaran, Quan~Z. Sheng, Endrowednes Kuantama, and Wei
+  Ni.
+\newblock A survey of adaptive routing techniques in two-dimensional
+  network-on-chip architectures.
+\newblock {\em IEEE Communications Surveys \& Tutorials}, 28:3195--3234, 2026.
+
+\bibitem{An2021}
+Jianfeng An, Hongjun You, Jinhua Sun, and Jiawei Cao.
+\newblock Fault tolerant xy-yx routing algorithm supporting backtracking
+  strategy for noc.
+\newblock In {\em 2021 IEEE Intl Conf on Parallel \& Distributed Processing
+  with Applications, Big Data \& Cloud Computing, Sustainable Computing \&
+  Communications, Social Computing \& Networking
+  (ISPA/BDCloud/SocialCom/SustainCom)}, pages 632--635, 2021.
+
+\bibitem{Jagadheesh2020}
+Jagadheesh Samala, Harshvardhan Takawale, Yash Chokhani, P.~Veda Bhanu, and
+  Soumya J.
+\newblock Fault-tolerant routing algorithm for mesh based noc using
+  reinforcement learning.
+\newblock In {\em 2020 24th International Symposium on VLSI Design and Test
+  (VDAT)}, pages 1--6, 2020.
+
+\bibitem{LARE2023}
+Shaocong Wang, Xiaoyun Zhang, Dezun Dong, Cunlu Li, Zicong Wang, and Zongmao
+  Zhang.
+\newblock Lare: A linear approximate reinforcement learning based adaptive
+  routing for network-on-chips.
+\newblock In {\em 2023 IEEE International Symposium on Circuits and Systems
+  (ISCAS)}, pages 1--5, 2023.
+
+\bibitem{Bhardwaj2012}
+Kshitij Bhardwaj, Koushik Chakraborty, and Sanghamitra Roy.
+\newblock Towards graceful aging degradation in nocs through an adaptive
+  routing algorithm.
+\newblock In {\em DAC Design Automation Conference 2012}, pages 382--391, 2012.
+
+\bibitem{Ghaderi2017}
+Zana Ghaderi, Ayed Alqahtani, and Nader Bagherzadeh.
+\newblock Online monitoring and adaptive routing for aging mitigation in nocs.
+\newblock In {\em Design, Automation \& Test in Europe Conference \& Exhibition
+  (DATE), 2017}, pages 67--72, 2017.
+
+\bibitem{Kim2013}
+Hyungjun Kim, Arseniy Vitkovskiy, Paul~V. Gratz, and Vassos Soteriou.
+\newblock Use it or lose it: Wear-out and lifetime in future chip
+  multiprocessors.
+\newblock In {\em 2013 46th Annual IEEE/ACM International Symposium on
+  Microarchitecture (MICRO)}, pages 136--147, 2013.
+
+\bibitem{Duato1993}
+J.~Duato.
+\newblock A new theory of deadlock-free adaptive routing in wormhole networks.
+\newblock {\em IEEE Transactions on Parallel and Distributed Systems},
+  4(12):1320--1331, 1993.
+
+\bibitem{gem5}
+Nathan Binkert, Bradford Beckmann, Gabriel Black, Steven~K. Reinhardt, Ali
+  Saidi, Arkaprava Basu, Joel Hestness, Derek~R. Hower, Tushar Krishna, Somayeh
+  Sardashti, Rathijit Sen, Korey Sewell, Muhammad Shoaib, Nilay Vaish, Mark~D.
+  Hill, and David~A. Wood.
+\newblock The gem5 simulator.
+\newblock {\em SIGARCH Comput. Archit. News}, 39(2):1–7, August 2011.
+
+\bibitem{lowepower2020gem5simulatorversion200}
+Jason Lowe-Power, Abdul~Mutaal Ahmad, Ayaz Akram, Mohammad Alian, Rico
+  Amslinger, Matteo Andreozzi, Adrià Armejach, Nils Asmussen, Brad Beckmann,
+  Srikant Bharadwaj, Gabe Black, Gedare Bloom, Bobby~R. Bruce, Daniel~Rodrigues
+  Carvalho, Jeronimo Castrillon, Lizhong Chen, Nicolas Derumigny, Stephan
+  Diestelhorst, Wendy Elsasser, Carlos Escuin, Marjan Fariborz, Amin
+  Farmahini-Farahani, Pouya Fotouhi, Ryan Gambord, Jayneel Gandhi, Dibakar
+  Gope, Thomas Grass, Anthony Gutierrez, Bagus Hanindhito, Andreas Hansson,
+  Swapnil Haria, Austin Harris, Timothy Hayes, Adrian Herrera, Matthew
+  Horsnell, Syed Ali~Raza Jafri, Radhika Jagtap, Hanhwi Jang, Reiley Jeyapaul,
+  Timothy~M. Jones, Matthias Jung, Subash Kannoth, Hamidreza Khaleghzadeh,
+  Yuetsu Kodama, Tushar Krishna, Tommaso Marinelli, Christian Menard, Andrea
+  Mondelli, Miquel Moreto, Tiago Mück, Omar Naji, Krishnendra Nathella, Hoa
+  Nguyen, Nikos Nikoleris, Lena~E. Olson, Marc Orr, Binh Pham, Pablo Prieto,
+  Trivikram Reddy, Alec Roelke, Mahyar Samani, Andreas Sandberg, Javier
+  Setoain, Boris Shingarov, Matthew~D. Sinclair, Tuan Ta, Rahul Thakur, Giacomo
+  Travaglini, Michael Upton, Nilay Vaish, Ilias Vougioukas, William Wang,
+  Zhengrong Wang, Norbert Wehn, Christian Weis, David~A. Wood, Hongil Yoon, and
+  Éder F.~Zulian.
+\newblock The gem5 simulator: Version 20.0+, 2020.
+
+\end{thebibliography}

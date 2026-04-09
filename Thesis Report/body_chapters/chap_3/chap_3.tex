@@ -1,0 +1,238 @@
+\chapter{Aging-Aware Routing Algorithm System Design}
+
+This section describes the system-level modeling and design choices used to enable reliability-aware routing in the NoC. The proposed framework integrates dynamic temperature variation, process variation, and aging models for EM and HCI into the routing decision process. These models are derived from prior work in \cite{Clotho2015} and are combined with a reinforcement learning-based routing policy inspired by LARE \cite{LARE2023}.
+
+Although other aging mechanisms such as Bias Temperature Instability (BTI) also affect CMOS devices, they are not considered in this work. As discussed in Clotho, BTI degradation is primarily induced when circuits remain underutilized, which can be mitigated using techniques such as \textit{Use it or Lose it} proposed by Kim er al. \cite{Kim2013}. Therefore, this work focuses on EM and HCI, which are directly influenced by traffic patterns and are more suitable for routing-level optimization.
+
+Unlike conventional routing schemes that focus only on performance metrics such as latency or throughput, this design explicitly incorporates device-level reliability factors into routing decisions. Temperature and utilization are treated as dynamic runtime inputs, while process variation is modeled as a static property determined during initialization.
+
+\section{Dynamic Temperature Variation}
+
+Temperature is a key factor influencing both EM and HCI aging and is modeled as a spatially varying runtime parameter. In a CMP, temperature is not uniform across the chip, but depends on the activity of individual cores, with each tile exhibiting its own thermal profile. Following Clotho, the chip is modeled as a set of tiles, each associated with a router, and a per-tile temperature map is maintained. The NoC contributes only a small fraction of total chip power, so temperature is assumed to be primarily driven by core activity rather than router behavior.
+
+Temperature is treated as a slowly varying parameter and is updated periodically (every $10^7$ cycles) to reflect realistic thermal dynamics. The temperature values are generated using a random but spatially correlated distribution within a range of 65°C to 85°C, ensuring that neighboring tiles exhibit similar thermal behavior. This temperature map is used directly in the EM and HCI models, allowing routing decisions to avoid thermally stressed regions and reduce localized wear.
+
+\section{Process Variation (PV)}
+
+Process variation (PV) captures fabrication-time deviations in transistor parameters, leading to permanent differences in device characteristics across the chip. Unlike temperature, which varies at runtime, PV is static and determined once during initialization.
+
+Following \cite{Clotho2015}, PV is modeled through variations in threshold voltage ($V_{th}$) and effective gate length ($L_{eff}$) for each router. These variations consist of both random and systematic components. The random component represents uncorrelated device-level fluctuations, while the systematic component is spatially correlated, meaning that nearby routers exhibit similar deviations.
+
+The spatial correlation of the systematic component is modeled using a spherical correlation function:
+
+\begin{equation}
+    \rho(r) =
+    \begin{cases}
+        1 - \frac{3r}{2\phi} + \frac{r^3}{2\phi^3}, & r \leq \phi \\
+        0, & r > \phi
+    \end{cases}
+\end{equation}
+
+where (r) is the distance between two routers and ($\phi$) defines the correlation range, expressed as a fraction of a die's length at which there is no more within-die correlation between the PV parameters of any two given transistors.
+
+Since both the random and systematic components are modeled as independent Gaussian variables, the resulting variations in ($V_{th}$) and ($L_{eff}$) are also normally distributed. The combined variance is given by the sum of the individual variances of these components.
+
+\section{Electromigration (EM)}
+
+Electromigration (EM) is a wearout mechanism caused by the gradual movement of metal ions in interconnect wires under high current density. In NoCs, EM primarily affects the \textit{Vdd} and \textit{GND} connections of long router-to-router links, as these wires experience repeated charge and discharge cycles due to switching activity.
+
+Following \cite{Clotho2015}, EM-induced degradation is modeled at the links, with lifetime expressed in terms of MTTF:
+
+\begin{equation}
+MTTF_{EM} \propto \alpha_{link}^{-2} \cdot \exp\left(\frac{E_{a,EM}}{kT}\right)
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\alpha_{link} = 0.5 \times U_{link}$ is the link switching activity, derived from link utilization
+    \item $T$ is the local temperature in Kelvin
+    \item $E_{a,EM}$ is the activation energy for electromigration (approximately 0.9 eV)
+    \item $k$ is Boltzmann’s constant
+\end{itemize}
+
+In this work, a proportional MTTF value is computed for each link and used as a relative measure of reliability. These values are updated based on runtime utilization and temperature, allowing the routing algorithm to avoid heavily stressed links. Due to its quadratic dependence on activity, EM is highly sensitive to traffic distribution. Even small changes in routing decisions can significantly improve lifetime.
+
+\section{Hot-Carrier Injection (HCI)}
+
+HCI is a transistor-level aging mechanism in which high-energy carriers become trapped in the gate oxide, leading to a gradual increase in threshold voltage ($V_{th}$) and degradation of transistor performance. Over time, this results in increased delay along critical paths, eventually causing timing violations in router pipelines.
+
+Following \cite{Clotho2015}, HCI degradation is modeled at the routers, incorporating the effects of PV. The MTTF is given by:
+
+\begin{equation}
+MTTF_{HCI,PV} \propto \frac{(I_{sub}(V_{th}, L_{eff}))^{-N}}{\alpha_{router}} \cdot \exp\left(\frac{E_{a,HCI}}{kT}\right)
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\alpha_{router} = 0.1 \times U_{router}$ is the router switching activity, reflecting that only a fraction of flits (e.g., header flits) exercise the critical path
+    \item $T$ is the local temperature in Kelvin
+    \item $I_{sub}(V_{th}, L_{eff})$ is the subthreshold leakage current, precomputed per router based on process variation
+    \item $N$ is an empirical exponent (approximately 1.5)
+    \item $E_{a,HCI}$ is the activation energy for HCI (typically 0.2--0.4 eV)
+    \item $k$ is Boltzmann’s constant
+\end{itemize}
+
+In this work, a proportional MTTF value is computed for each router using precomputed $I_{sub}$ values and runtime activity and temperature. These values guide routing decisions by discouraging traffic through routers that are inherently weaker or experiencing higher stress. Compared to EM, HCI exhibits weaker sensitivity to load balancing due to its linear dependence on activity. However, its interaction with process variation makes it an important factor in identifying vulnerable routers and improving overall network reliability.
+
+\subsubsection{Utilization of Lifetime Models}
+
+The EM and HCI models described in the previous sections are used to guide routing decisions and evaluate system reliability. During routing, the MTTF of candidate next-hop routers and links is computed based on current utilization and temperature. These values are normalized relative to the network state and used to define the reward function. The routing policy then prefers paths that traverse components with higher MTTF. Throughout simulation, MTTF values are updated periodically as utilization statistics and temperature maps are refreshed. This allows the system to track the evolution of wear across all routers and links as traffic patterns change over time. At the end of simulation, final MTTF values are collected for all network components. 
+
+To compare different routing schemes, the Acceleration Factor (AF) is used as a relative lifetime metric. AF measures the lifetime of the system under a given routing policy relative to a reference baseline. In this work, the reference is deterministic DOR, following \cite{Clotho2015}.
+
+\begin{equation}
+AF_{EM} = \frac{MTTF_{EM}\big|_{RL}}{MTTF_{EM}\big|_{DOR}}, 
+\quad
+AF_{HCI} = \frac{MTTF_{HCI,PV}\big|_{RL}}{MTTF_{HCI,PV}\big|_{DOR}}
+\end{equation}
+
+Since both simulations share the same process variation and technology constants, unknown parameters and $I_{sub}$ cancel out in the ratio. As a result, AF depends only on runtime factors such as utilization and temperature.
+
+\section{Reinforcement Learning-Based Routing Policy}
+
+Reinforcement Learning is a learning framework in which an agent interacts with an environment to learn a policy that maximizes long-term reward. At each decision step, the agent observes the current \textit{state}, selects an \textit{action}, and receives a \textit{reward} based on the outcome. Over time, the agent improves its decision-making by learning from these interactions. Figure~\ref{fig:RL_framework} illustrates this agent-environment interaction model.
+
+\begin{figure}[ht]
+  \begin{center}
+      \includegraphics[width=0.7\linewidth]{body_chapters/chap_3/figs/RL.png}
+      \caption[Reinforcement Learning Framework]{Schematic of the reinforcement learning framework for routing policy learning.}
+      \label{fig:RL_framework}
+  \end{center}
+\end{figure}
+
+In the context of NoCs, each router is modeled as an independent RL agent that selects the next-hop direction for incoming packets. The goal is to learn a routing policy that balances performance and reliability by considering congestion and aging information. This work adopts a linear function approximation-based RL framework inspired by LARE \cite{LARE2023}, which enables scalable implementation by avoiding large Q-tables.
+
+\subsubsection{State Representation}
+
+Routing decisions are made at each router when multiple minimal paths are available. The state is represented using a feature vector $\phi(s,a)$ constructed for each candidate action. The feature vector captures both network state and reliability information:
+
+\begin{equation}
+\phi(s,a) = [f_0, f_1, f_2, f_3, f_4, f_5, f_6, f_7, f_8]
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $f_0$: Bias term (constant 1)
+    \item $f_1$: Normalized destination router ID
+    \item $f_2$: Normalized current router ID
+    \item $f_3$: Normalized hops traversed
+    \item $f_4$: Normalized remaining distance to destination
+    \item $f_5$: Normalized EM MTTF of candidate link
+    \item $f_6$: Normalized HCI MTTF of candidate router
+    \item $f_7$: Output port congestion level
+    \item $f_8$: Encoded input port direction
+\end{itemize}
+
+\subsubsection{Q-Value Function}
+
+To reduce hardware overhead, the Q-value is approximated using a linear function instead of a lookup table:
+
+\begin{equation}
+Q(s,a) = \theta \cdot \phi(s,a)
+\end{equation}
+
+Each router maintains a parameter vector $\theta$ for each output port. This formulation significantly reduces storage requirements compared to tabular Q-learning while preserving learning capability.
+
+\subsubsection{Action Selection Policy}
+
+An $\epsilon$-greedy policy is used to balance exploration and exploitation:
+
+\begin{equation}
+a =
+\begin{cases}
+\text{random action}, & \text{with probability } \epsilon \\
+\arg\max_a Q(s,a), & \text{otherwise}
+\end{cases}
+\end{equation}
+
+The action space consists of minimal routing directions (horizontal or vertical).
+
+\subsubsection{Reward Function}
+
+The reward function is designed to capture both reliability and performance objectives:
+
+\begin{equation}
+R = 0.7 \cdot \text{MTTF}_{score} - 0.30 \cdot \text{cong}_{norm} + 0.15
+\end{equation}
+
+The reliability component is defined as a weighted combination of normalized EM and HCI metrics:
+
+\begin{equation}
+\text{MTTF}_{score} = C_{EM} \cdot EM_{norm} + C_{HCI} \cdot HCI_{norm}
+\end{equation}
+
+The normalized MTTF values are computed using peer normalization across candidate actions:
+
+\begin{equation}
+EM_{norm} = \frac{MTTF_{EM}}{\max(MTTF_{EM}^{(h)}, MTTF_{EM}^{(v)})}
+\end{equation}
+
+\begin{equation}
+    HCI_{norm} = \frac{MTTF_{HCI}}{\max(MTTF_{HCI}^{(h)}, MTTF_{HCI}^{(v)})}
+\end{equation}
+
+To dynamically emphasize the more critical aging mechanism, a weighting function is applied:
+
+\begin{equation}
+C(x) =
+\frac{\exp\left(8 \cdot \frac{x - x_{min}}{x_{max} - x_{min}}\right) - \exp(-8)}
+{1 - \exp(-8)}
+\end{equation}
+
+where $x \in \{MTTF_{EM}, MTTF_{HCI}\}$, and $x_{max}$ and $x_{min}$ are the maximum and minimum values among candidate actions. The weights are then defined as:
+
+\begin{equation}
+C_{EM} = C(MTTF_{EM}), \quad C_{HCI} = C(MTTF_{HCI})
+\end{equation}
+
+The congestion term $\text{cong}_{norm}$ represents the normalized congestion level of the candidate output port. It is derived from the fraction of active virtual channels (VCs) at the output port and discretized into three levels:
+
+\begin{itemize}
+    \item Low congestion: $\text{cong}_{norm} = 0$
+    \item Medium congestion: $\text{cong}_{norm} = 0.5$
+    \item High congestion: $\text{cong}_{norm} = 1.0$
+\end{itemize}
+
+\subsubsection{Update Rule}
+
+The Q-value parameters are updated using temporal-difference learning:
+
+\begin{equation}
+\delta = R + \gamma \max_{a'} Q(s', a') - Q(s,a)
+\end{equation}
+
+\begin{equation}
+\theta \leftarrow \theta + \alpha \cdot \delta \cdot \phi(s,a)
+\end{equation}
+
+where $\alpha$ is the learning rate and $\gamma$ is the discount factor.
+
+\section{Deadlock Avoidance}
+
+Adaptive routing algorithms that allow multiple path choices can introduce cyclic dependencies between resources, leading to deadlock. Since the proposed RL-based routing dynamically selects paths based on network conditions, deadlock avoidance must be explicitly enforced. To guarantee deadlock freedom, this work adopts an escape virtual channel (VC) mechanism based on Duato's theory \cite{Duato1993}. The key idea is to reserve a subset of resources that follow a strictly deadlock-free routing function.
+
+In this implementation, VC0 is designated as the escape VC and always follows deterministic dimension-order (XY) routing. Since XY routing is provably deadlock-free, packets assigned to VC0 are guaranteed forward progress regardless of network conditions. All other virtual channels are allowed to use the RL-based adaptive routing policy. If a packet cannot safely proceed using adaptive routing, it can fall back to the escape VC, ensuring that no cyclic dependencies persist in the network.
+
+% \section{Tables}
+
+% Tables can be placed with the \textbf{\textbackslash table} environment. The same instructions for the figures apply here; use the \textbf{\textbackslash label} command often
+
+% \begin{center}
+%   \begin{table}[h]
+%     \centering
+%     \begin{tabular}{l c l c}
+%     \hline
+%     Layer Type & Size & Activation & Regularization\\
+%     \hline
+%     Flatten& $30 \times 30 \times 3$ &ReLU & ---\\
+%     Dense & 4096 & ReLU & 10\% Dropout\\
+%     Dense & 2048 & ReLU & 10\% Dropout\\
+%     Dense & 1024 & ReLU & 10\% Dropout\\
+%     Dense & 1024 & ReLU & --- \\
+%     Dense & 6 & Softmax & --- \\
+%     \hline
+%     \end{tabular}
+%     \caption[Short Caption for List of Tables.]{Long caption to appear in the body of the text with the table.}
+%     \label{tab:ModelArchitecture}
+%   \end{table}
+% \end{center}

@@ -1,0 +1,27 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces CMP Failure Modes}}{2}{figure.caption.9}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Reinforcement Learning Framework}}{12}{figure.caption.11}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Mean EM Wear in Links}}{19}{figure.caption.18}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Mean HCI Wear in Routers}}{20}{figure.caption.19}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Average Packet Latency (Transpose, Bit Reverse, Bit Rotation)}}{22}{figure.caption.21}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Average Packet Latency under Bit Rotation Traffic.}}{23}{figure.caption.22}%
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Average Packet Latency (Uniform, Shuffle)}}{24}{figure.caption.23}%
+\contentsline {figure}{\numberline {4.6}{\ignorespaces Average Packet Latency (Tornado, Neighbor)}}{25}{figure.caption.24}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {A.1}{\ignorespaces Uniform Random Traffic.}}{29}{figure.caption.26}%
+\contentsline {figure}{\numberline {A.2}{\ignorespaces Shuffle Traffic.}}{29}{figure.caption.27}%
+\contentsline {figure}{\numberline {A.3}{\ignorespaces Transpose Traffic.}}{30}{figure.caption.28}%
+\contentsline {figure}{\numberline {A.4}{\ignorespaces Bit Reverse Traffic.}}{30}{figure.caption.29}%
+\contentsline {figure}{\numberline {A.5}{\ignorespaces Bit Rotation Traffic.}}{30}{figure.caption.30}%
+\contentsline {figure}{\numberline {A.6}{\ignorespaces Neighbor Traffic.}}{31}{figure.caption.31}%
+\contentsline {figure}{\numberline {A.7}{\ignorespaces Tornado Traffic.}}{31}{figure.caption.32}%

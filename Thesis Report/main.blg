@@ -1,0 +1,68 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+Reallocating 'name_of_file' (item size: 1) to 49 items.
+A level-1 auxiliary file: admin_chapters/committee_page/committee_page.aux
+Reallocating 'name_of_file' (item size: 1) to 43 items.
+A level-1 auxiliary file: admin_chapters/lay_summary/lay_summary.aux
+Reallocating 'name_of_file' (item size: 1) to 35 items.
+A level-1 auxiliary file: admin_chapters/preface/preface.aux
+Reallocating 'name_of_file' (item size: 1) to 63 items.
+A level-1 auxiliary file: admin_chapters/list_of_abbreviations/list_of_abbreviations.aux
+Reallocating 'name_of_file' (item size: 1) to 53 items.
+A level-1 auxiliary file: admin_chapters/acknowledgements/acknowledgements.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: body_chapters/chap_1/chap_1.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: body_chapters/chap_2/chap_2.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: body_chapters/chap_3/chap_3.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: body_chapters/chap_4/chap_4.aux
+Reallocating 'name_of_file' (item size: 1) to 6 items.
+The style file: unsrt.bst
+Reallocating 'name_of_file' (item size: 1) to 11 items.
+Reallocating 'name_of_file' (item size: 1) to 34 items.
+A level-1 auxiliary file: body_chapters/chap_a1/chap_a1.aux
+Database file #1: sample_bib.bib
+You've used 16 entries,
+            1791 wiz_defined-function locations,
+            563 strings with 9122 characters,
+and the built_in function-call counts, 5992 in all, are:
+= -- 403
+> -- 475
+< -- 10
++ -- 164
+- -- 148
+* -- 485
+:= -- 958
+add.period$ -- 47
+call.type$ -- 16
+change.case$ -- 16
+chr.to.int$ -- 0
+cite$ -- 16
+duplicate$ -- 242
+empty$ -- 496
+format.name$ -- 148
+if$ -- 1341
+int.to.chr$ -- 0
+int.to.str$ -- 16
+missing$ -- 15
+newline$ -- 82
+num.names$ -- 16
+pop$ -- 72
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 152
+stack$ -- 0
+substring$ -- 331
+swap$ -- 98
+text.length$ -- 10
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 0
+while$ -- 41
+width$ -- 18
+write$ -- 175

@@ -1,0 +1,38 @@
+\contentsline {chapter}{{Abstract}}{iii}{chapter*.2}%
+\contentsline {chapter}{{Lay Summary}}{iv}{chapter*.3}%
+\contentsline {chapter}{{Preface}}{v}{chapter*.4}%
+\contentsline {chapter}{{Table of Contents}}{vi}{chapter*.5}%
+\contentsline {chapter}{{List of Figures}}{viii}{chapter*.6}%
+\contentsline {chapter}{{List of Abbreviations}}{ix}{chapter*.7}%
+\contentsline {chapter}{{Acknowledgements}}{x}{chapter*.8}%
+\contentsline {chapter}{\numberline {1}{Introduction}}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}{Problem Statement}}{3}{section.1.1}%
+\contentsline {section}{\numberline {1.2}{Scope of Research}}{3}{section.1.2}%
+\contentsline {chapter}{\numberline {2}{Literature Review}}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}{Introduction to Routing Algorithms in NoCs}}{4}{section.2.1}%
+\contentsline {section}{\numberline {2.2}{Fault-Tolerant Routing Algorithm in NoC}}{5}{section.2.2}%
+\contentsline {section}{\numberline {2.3}{Aging-Aware Routing Algorithm}}{6}{section.2.3}%
+\contentsline {section}{\numberline {2.4}{Gaps in Prior Studies}}{7}{section.2.4}%
+\contentsline {chapter}{\numberline {3}{Aging-Aware Routing Algorithm System Design}}{8}{chapter.3}%
+\contentsline {section}{\numberline {3.1}{Dynamic Temperature Variation}}{8}{section.3.1}%
+\contentsline {section}{\numberline {3.2}{Process Variation (PV)}}{9}{section.3.2}%
+\contentsline {section}{\numberline {3.3}{Electromigration (EM)}}{10}{section.3.3}%
+\contentsline {section}{\numberline {3.4}{Hot-Carrier Injection (HCI)}}{10}{section.3.4}%
+\contentsline {subsubsection}{{Utilization of Lifetime Models}}{11}{section*.10}%
+\contentsline {section}{\numberline {3.5}{Reinforcement Learning-Based Routing Policy}}{12}{section.3.5}%
+\contentsline {subsubsection}{{State Representation}}{13}{section*.12}%
+\contentsline {subsubsection}{{Q-Value Function}}{13}{section*.13}%
+\contentsline {subsubsection}{{Action Selection Policy}}{14}{section*.14}%
+\contentsline {subsubsection}{{Reward Function}}{14}{section*.15}%
+\contentsline {subsubsection}{{Update Rule}}{15}{section*.16}%
+\contentsline {section}{\numberline {3.6}{Deadlock Avoidance}}{15}{section.3.6}%
+\contentsline {chapter}{\numberline {4}{Evaluation}}{17}{chapter.4}%
+\contentsline {section}{\numberline {4.1}{Simulation Setup}}{17}{section.4.1}%
+\contentsline {section}{\numberline {4.2}{Garnet Synthetic Traffic and Evaluation Metrics}}{18}{section.4.2}%
+\contentsline {section}{\numberline {4.3}{Results}}{19}{section.4.3}%
+\contentsline {subsubsection}{{Acceleration Factor}}{19}{section*.17}%
+\contentsline {subsubsection}{{Latency Analysis}}{20}{section*.20}%
+\contentsline {chapter}{{Bibliography}}{26}{chapter*.25}%
+\contentsline {part}{{Appendices}}{}{}
+\contentsline {chapter}{\numberline {A}{Mean Acceleration Factor}}{29}{appendix.A}%
+\contentsline {section}{\numberline {A.1}{Mean Acceleration Factor (AF) Trends Across Injection Rates}}{29}{section.A.1}%
