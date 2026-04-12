@@ -18,7 +18,6 @@ echo "injection_rate,avg_packet_latency_cycles,avg_packet_network_latency_cycles
 # Uniform-Random: Injection rates 0.01 to 0.40 inclusive, step 0.03
 # Shuffle: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Transpose: Injection rates 0.01 to 0.20 inclusive, step 0.01
-# Bit Complement: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Bit Reverse: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Bit Rotation: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Neighbor: Injection rates 0.01 to 0.40 inclusive, step 0.03

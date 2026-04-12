@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Plot average packet latency (cycles) for DOR and RL over injection rates,
-one plot per traffic type.
+Plot average packet latency (cycles) for DOR, RL, and Clotho-GAR
+over injection rates, one plot per traffic type.
 
-Output: plots/latency_<traffic>.png
+Output: plots/latency/latency_<traffic>.png
 """
 
 import os
@@ -27,14 +27,26 @@ TRAFFICS = [
     "neighbor",
 ]
 
-# rl_neighbor uses a different CSV name
+# Clotho sweep uses gem5 synthetic name as the directory component.
+CLOTHO_NAME = {
+    "uniform":        "uniform_random",
+    "shuffle":        "shuffle",
+    "transpose":      "transpose",
+    "tornado":        "tornado",
+    "bit_complement": "bit_complement",
+    "bit_reverse":    "bit_reverse",
+    "bit_rotation":   "bit_rotation",
+    "neighbor":       "neighbor",
+}
+
+
 def csv_paths(traffic):
-    dor_csv = os.path.join(RESULTS, f"dor_{traffic}_rand_vnet_summary.csv")
-    # try both rl_<traffic> and rl_bit_<traffic> naming
-    rl_csv  = os.path.join(RESULTS, f"rl_{traffic}_rand_vnet_summary.csv")
+    dor_csv    = os.path.join(RESULTS, f"dor_{traffic}_rand_vnet_summary.csv")
+    rl_csv     = os.path.join(RESULTS, f"rl_{traffic}_rand_vnet_summary.csv")
     if not os.path.exists(rl_csv):
         rl_csv = os.path.join(RESULTS, f"rl_bit_{traffic}_rand_vnet_summary.csv")
-    return dor_csv, rl_csv
+    clotho_csv = os.path.join(RESULTS, f"clotho_{CLOTHO_NAME[traffic]}_rand_vnet_summary.csv")
+    return dor_csv, rl_csv, clotho_csv
 
 
 def read_latency(csv_path):
@@ -51,28 +63,32 @@ def read_latency(csv_path):
 
 
 for traffic in TRAFFICS:
-    dor_csv, rl_csv = csv_paths(traffic)
+    dor_csv, rl_csv, clotho_csv = csv_paths(traffic)
 
     if not os.path.exists(dor_csv):
         print(f"  Skipping {traffic}: DOR CSV not found ({dor_csv})")
         continue
-    if not os.path.exists(rl_csv):
-        print(f"  Skipping {traffic}: RL CSV not found ({rl_csv})")
-        continue
 
     dor_rates, dor_lat = read_latency(dor_csv)
-    rl_rates,  rl_lat  = read_latency(rl_csv)
-
-    if not dor_rates or not rl_rates:
-        print(f"  Skipping {traffic}: empty CSV data")
+    if not dor_rates:
+        print(f"  Skipping {traffic}: empty DOR CSV")
         continue
+
+    rl_data     = read_latency(rl_csv)     if os.path.exists(rl_csv)     else ([], [])
+    clotho_data = read_latency(clotho_csv) if os.path.exists(clotho_csv) else ([], [])
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
 
-    ax.plot(dor_rates, dor_lat, "o-",  color="#3a7ebf", linewidth=2,
+    ax.plot(dor_rates,       dor_lat,        "o-",  color="#3a7ebf", linewidth=2,
             markersize=5, label="DOR")
-    ax.plot(rl_rates,  rl_lat,  "s--", color="#e07b39", linewidth=2,
-            markersize=5, label="Aging-Aware RL")
+
+    if rl_data[0]:
+        ax.plot(rl_data[0],     rl_data[1],     "s--", color="#e07b39", linewidth=2,
+                markersize=5, label="Aging-Aware RL")
+
+    if clotho_data[0]:
+        ax.plot(clotho_data[0], clotho_data[1], "^-.", color="#2ecc71", linewidth=2,
+                markersize=5, label="Clotho-GAR")
 
     ax.set_xlabel("Injection Rate (Packet/Cycle/Node)", fontsize=11)
     ax.set_ylabel("Average Packet Latency (Cycles)", fontsize=11)

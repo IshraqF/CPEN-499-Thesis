@@ -48,6 +48,7 @@
 #include "mem/ruby/network/garnet/GarnetLink.hh"
 #include "mem/ruby/network/garnet/NetworkInterface.hh"
 #include "mem/ruby/network/garnet/NetworkLink.hh"
+#include "mem/ruby/network/garnet/OutputUnit.hh"
 #include "mem/ruby/network/garnet/Router.hh"
 #include "mem/ruby/system/RubySystem.hh"
 #include "sim/core.hh"
@@ -772,6 +773,127 @@ GarnetNetwork::writeMTTFReport() const
         f << "link " << i << " " << src << " " << dst << " "
           << getRawEMMTTF(i, dst) << "\n";
     }
+}
+
+double
+GarnetNetwork::computeClothoWnorm(
+    const std::vector<int>& path_router_ids,
+    const std::vector<int>& path_link_rl_indices,
+    double em_global_max, double em_global_min,
+    double hci_global_max, double hci_global_min) const
+{
+    double wnorm = 0.0;
+    int n = (int)path_router_ids.size();
+    double em_norm_max  = 1.0;
+    double em_norm_min  = (em_global_max > 0.0)
+                          ? em_global_min / em_global_max : 0.0;
+    double hci_norm_max = 1.0;
+    double hci_norm_min = (hci_global_max > 0.0)
+                          ? hci_global_min / hci_global_max : 0.0;
+
+    for (int i = 0; i < n; ++i) {
+        int rl  = path_link_rl_indices[i];
+        int nxt = path_router_ids[i];
+
+        double raw_em = getRawEMMTTF(rl, nxt);
+        double em_n   = (em_global_max > 0.0) ? raw_em / em_global_max : 0.0;
+        double c_em   = computeCWeight(em_n, em_norm_max, em_norm_min);
+
+        double raw_hci = getRawHCIMTTF(nxt);
+        double hci_n   = (hci_global_max > 0.0) ? raw_hci / hci_global_max : 0.0;
+        double c_hci   = computeCWeight(hci_n, hci_norm_max, hci_norm_min);
+
+        wnorm += c_em * em_n + c_hci * hci_n;
+    }
+    return wnorm;
+}
+
+int
+GarnetNetwork::outportClothoGAR(int src_id, int dest_id,
+                                 int num_cols, int num_rows) const
+{
+    int dx = (dest_id % num_cols) - (src_id % num_cols);
+    int dy = (dest_id / num_cols) - (src_id / num_cols);
+    int steps_h = std::abs(dx);
+    int steps_v = std::abs(dy);
+    int total   = steps_h + steps_v;
+
+    std::string h_dirn = (dx > 0) ? "East"  : "West";
+    std::string v_dirn = (dy > 0) ? "North" : "South";
+    int h_step = (dx > 0) ?  1        : -1;
+    int v_step = (dy > 0) ?  num_cols : -num_cols;
+
+    struct PathInfo {
+        std::vector<int> router_ids;
+        std::vector<int> link_rls;
+        int first_outport;
+    };
+    std::vector<PathInfo> paths;
+    paths.reserve(256);
+
+    double em_max  = 0.0, em_min  = std::numeric_limits<double>::max();
+    double hci_max = 0.0, hci_min = std::numeric_limits<double>::max();
+
+    for (int mask = 0; mask < (1 << total); ++mask) {
+        if (__builtin_popcount(mask) != steps_h) continue;
+
+        PathInfo pi;
+        pi.router_ids.reserve(total);
+        pi.link_rls.reserve(total);
+        pi.first_outport = -1;
+
+        int cur = src_id;
+        bool valid = true;
+
+        for (int bit = 0; bit < total && valid; ++bit) {
+            bool is_h = (mask >> bit) & 1;
+            const std::string& dirn = is_h ? h_dirn : v_dirn;
+            int step = is_h ? h_step : v_step;
+
+            Router* r = m_routers[cur];
+            int outport_idx = r->get_outport_idx(dirn);
+            if (outport_idx < 0) { valid = false; break; }
+
+            NetworkLink* lnk = r->getOutputUnit(outport_idx)->get_out_link();
+            int rl  = getLinkRLIndex(lnk);
+            int nxt = cur + step;
+
+            pi.router_ids.push_back(nxt);
+            pi.link_rls.push_back(rl);
+            if (bit == 0) pi.first_outport = outport_idx;
+
+            double em  = getRawEMMTTF(rl, nxt);
+            double hci = getRawHCIMTTF(nxt);
+            em_max  = std::max(em_max,  em);
+            em_min  = std::min(em_min,  em);
+            hci_max = std::max(hci_max, hci);
+            hci_min = std::min(hci_min, hci);
+
+            cur = nxt;
+        }
+
+        if (valid) paths.push_back(std::move(pi));
+    }
+
+    if (paths.empty()) {
+        Router* r = m_routers[src_id];
+        int op = r->get_outport_idx(h_dirn);
+        return (op >= 0) ? op : r->get_outport_idx(v_dirn);
+    }
+
+    double best_score = -std::numeric_limits<double>::max();
+    int best_outport  = paths[0].first_outport;
+
+    for (const auto& pi : paths) {
+        double score = computeClothoWnorm(pi.router_ids, pi.link_rls,
+                                          em_max, em_min,
+                                          hci_max, hci_min);
+        if (score > best_score) {
+            best_score   = score;
+            best_outport = pi.first_outport;
+        }
+    }
+    return best_outport;
 }
 
 // Get ID of router connected to a NI.

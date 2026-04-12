@@ -12,34 +12,33 @@ TICKS_PER_CYCLE=1000   # 1ps tick resolution, 1GHz clock
 
 mkdir -p "$RESULTS"
 
-SUMMARY="$RESULTS/dor_neighbor_rand_vnet_summary.csv"
+SUMMARY="$RESULTS/clotho_tornado_rand_vnet_summary.csv"
 echo "injection_rate,avg_packet_latency_cycles,avg_packet_network_latency_cycles,avg_packet_queueing_latency_cycles" > "$SUMMARY"
 
 # Uniform-Random: Injection rates 0.01 to 0.40 inclusive, step 0.03
 # Shuffle: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Transpose: Injection rates 0.01 to 0.20 inclusive, step 0.01
-# Bit Complement: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Bit Reverse: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Bit Rotation: Injection rates 0.01 to 0.20 inclusive, step 0.01
 # Neighbor: Injection rates 0.01 to 0.40 inclusive, step 0.03
-for i in $(seq 0 13); do
-    RATE=$(awk "BEGIN { printf \"%.2f\", 0.01 + $i * 0.03 }")
-    OUTDIR="$RESULTS/dor_neighbor_rand_vnet${RATE}"
+for i in $(seq 0 19); do
+    RATE=$(awk "BEGIN { printf \"%.2f\", 0.01 + $i * 0.01 }")
+    OUTDIR="$RESULTS/clotho_tornado_rand_vnet${RATE}"
     mkdir -p "$OUTDIR"
 
-    MTTF_FILE="$OUTDIR/mttf_dor_neighbor_rand_vnet${RATE}.txt"
+    MTTF_FILE="$OUTDIR/mttf_clotho_tornado_rand_vnet${RATE}.txt"
 
-    echo "=== Running DOR neighbor inj=${RATE} ==="
+    echo "=== Running Clotho tornado inj=${RATE} ==="
 
     $GEM5 --outdir="$OUTDIR" $CFG \
         --num-cpus=64 --num-dirs=64 \
         --network=garnet --topology=Mesh_XY --mesh-rows=8 \
         --sim-cycles=50000000 \
-        --synthetic=neighbor \
+        --synthetic=tornado \
         --injectionrate="$RATE" \
         --inj-vnet=-1 \
         --router-latency=1 --link-latency=1 --vcs-per-vnet=4 \
-        --routing-algorithm=1 \
+        --routing-algorithm=3 \
         --garnet-deadlock-threshold=20000000 \
         --mttf-output-file="$MTTF_FILE"
 

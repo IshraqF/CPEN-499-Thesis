@@ -199,6 +199,8 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
         // any custom algorithm
         case CUSTOM_: outport =
             outportComputeCustom(route, inport, inport_dirn); break;
+        case CLOTHO_: outport =
+            outportComputeClothoGAR(route, inport, inport_dirn); break;
         default: outport =
             lookupRoutingTable(route.vnet, route.net_dest); break;
     }
@@ -543,6 +545,53 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
     }
 
     return chosen_outport;
+}
+
+int
+RoutingUnit::outportComputeClothoGAR(RouteInfo route,
+                                      int inport,
+                                      PortDirection inport_dirn)
+{
+    GarnetNetwork* net = m_router->get_net_ptr();
+    Cycles cur = m_router->curCycle();
+
+    // Trigger periodic wear state update (same pattern as LARE)
+    net->maybeUpdateWearoutState(cur);
+
+    int num_cols = net->getNumCols();
+    int num_rows = net->getNumRows();
+    int my_id    = m_router->get_id();
+    int dest_id  = route.dest_router;
+
+    int my_x   = my_id   % num_cols;
+    int my_y   = my_id   / num_cols;
+    int dest_x = dest_id % num_cols;
+    int dest_y = dest_id / num_cols;
+    int dx = dest_x - my_x;
+    int dy = dest_y - my_y;
+
+    // Dimension-order fallback (avoids outportComputeXY's inport assertions,
+    // which do not hold after adaptive hops on higher VCs).
+    auto dimOrderOutport = [&]() -> int {
+        if (dx == 0 && dy == 0) return m_outports_dirn2idx.at("Local");
+        if (dx != 0) return m_outports_dirn2idx.at((dx > 0) ? "East" : "West");
+        return m_outports_dirn2idx.at((dy > 0) ? "North" : "South");
+    };
+
+    // Escape VC check — VC 0 always uses DOR to guarantee deadlock freedom
+    int vcs_per_vnet = (int)m_router->get_vc_per_vnet();
+    int local_vc     = route.vc % vcs_per_vnet;
+    if (local_vc == 0) {
+        return dimOrderOutport();
+    }
+
+    // Forced routing when one dimension is already resolved
+    if (dx == 0 && dy == 0) return m_outports_dirn2idx.at("Local");
+    if (dx == 0) return m_outports_dirn2idx.at((dy > 0) ? "North" : "South");
+    if (dy == 0) return m_outports_dirn2idx.at((dx > 0) ? "East"  : "West");
+
+    // Both dimensions nonzero: delegate to Clotho-GAR path scoring
+    return net->outportClothoGAR(my_id, dest_id, num_cols, num_rows);
 }
 
 } // namespace garnet

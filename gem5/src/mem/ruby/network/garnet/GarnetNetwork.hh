@@ -202,12 +202,26 @@ class GarnetNetwork : public Network
     // AF output at simulation end
     void writeMTTFReport() const;
 
+    // Clotho-GAR: enumerate all minimal paths, score by weighted MTTF sum,
+    // return outport index of first hop of the highest-scoring path.
+    int outportClothoGAR(int src_id, int dest_id,
+                         int num_cols, int num_rows) const;
+
+    // Score one candidate path using Clotho Eq.18 exponential weighting.
+    // path_router_ids[i]      = destination router of hop i
+    // path_link_rl_indices[i] = RL index of link used at hop i
+    double computeClothoWnorm(
+        const std::vector<int>& path_router_ids,
+        const std::vector<int>& path_link_rl_indices,
+        double em_global_max, double em_global_min,
+        double hci_global_max, double hci_global_min) const;
+
     // LARE dimensionality constant
     static const int LARE_NUM_FEATURES = 9;
 
     // RL hyperparameter constants
-    static constexpr double RL_ALPHA     = 0.1;
-    static constexpr double RL_GAMMA     = 0.95;
+    static constexpr double RL_ALPHA     = 0.01;
+    static constexpr double RL_GAMMA     = 0.9;
     static constexpr double RL_W_WEAR    = 0.7;
     static constexpr double RL_W_LAT     = 0.15;
     static constexpr double RL_W_BALANCE = 0.15;
