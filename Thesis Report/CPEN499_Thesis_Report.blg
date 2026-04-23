@@ -1,0 +1,59 @@
+This is BibTeX, Version 0.99d (TeX Live 2024)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: CPEN499_Thesis_Report.aux
+A level-1 auxiliary file: admin_chapters/committee_page/committee_page.aux
+A level-1 auxiliary file: admin_chapters/lay_summary/lay_summary.aux
+A level-1 auxiliary file: admin_chapters/preface/preface.aux
+A level-1 auxiliary file: admin_chapters/list_of_abbreviations/list_of_abbreviations.aux
+A level-1 auxiliary file: admin_chapters/acknowledgements/acknowledgements.aux
+A level-1 auxiliary file: body_chapters/chap_1/chap_1.aux
+A level-1 auxiliary file: body_chapters/chap_2/chap_2.aux
+A level-1 auxiliary file: body_chapters/chap_3/chap_3.aux
+A level-1 auxiliary file: body_chapters/chap_4/chap_4.aux
+A level-1 auxiliary file: body_chapters/chap_5/chap_5.aux
+A level-1 auxiliary file: body_chapters/chap_6/chap_6.aux
+The style file: unsrt.bst
+A level-1 auxiliary file: body_chapters/chap_a1/chap_a1.aux
+A level-1 auxiliary file: body_chapters/chap_a2/chap_a2.aux
+Database file #1: sample_bib.bib
+You've used 28 entries,
+            1791 wiz_defined-function locations,
+            653 strings with 11988 characters,
+and the built_in function-call counts, 9547 in all, are:
+= -- 703
+> -- 637
+< -- 16
++ -- 222
+- -- 194
+* -- 722
+:= -- 1477
+add.period$ -- 83
+call.type$ -- 28
+change.case$ -- 28
+chr.to.int$ -- 0
+cite$ -- 28
+duplicate$ -- 413
+empty$ -- 849
+format.name$ -- 194
+if$ -- 2184
+int.to.chr$ -- 0
+int.to.str$ -- 28
+missing$ -- 27
+newline$ -- 142
+num.names$ -- 28
+pop$ -- 114
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 257
+stack$ -- 0
+substring$ -- 587
+swap$ -- 162
+text.length$ -- 16
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 0
+while$ -- 70
+width$ -- 30
+write$ -- 307
