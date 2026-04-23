@@ -6,33 +6,47 @@
 \contentsline {chapter}{{List of Abbreviations}}{ix}{chapter*.7}%
 \contentsline {chapter}{{Acknowledgements}}{x}{chapter*.8}%
 \contentsline {chapter}{\numberline {1}{Introduction}}{1}{chapter.1}%
-\contentsline {section}{\numberline {1.1}{Problem Statement}}{3}{section.1.1}%
-\contentsline {section}{\numberline {1.2}{Scope of Research}}{3}{section.1.2}%
-\contentsline {chapter}{\numberline {2}{Literature Review}}{4}{chapter.2}%
-\contentsline {section}{\numberline {2.1}{Introduction to Routing Algorithms in NoCs}}{4}{section.2.1}%
-\contentsline {section}{\numberline {2.2}{Fault-Tolerant Routing Algorithm in NoC}}{5}{section.2.2}%
-\contentsline {section}{\numberline {2.3}{Aging-Aware Routing Algorithm}}{6}{section.2.3}%
-\contentsline {section}{\numberline {2.4}{Gaps in Prior Studies}}{7}{section.2.4}%
-\contentsline {chapter}{\numberline {3}{Aging-Aware Routing Algorithm System Design}}{8}{chapter.3}%
-\contentsline {section}{\numberline {3.1}{Dynamic Temperature Variation}}{8}{section.3.1}%
-\contentsline {section}{\numberline {3.2}{Process Variation (PV)}}{9}{section.3.2}%
-\contentsline {section}{\numberline {3.3}{Electromigration (EM)}}{10}{section.3.3}%
-\contentsline {section}{\numberline {3.4}{Hot-Carrier Injection (HCI)}}{10}{section.3.4}%
-\contentsline {subsubsection}{{Utilization of Lifetime Models}}{11}{section*.10}%
-\contentsline {section}{\numberline {3.5}{Reinforcement Learning-Based Routing Policy}}{12}{section.3.5}%
-\contentsline {subsubsection}{{State Representation}}{13}{section*.12}%
-\contentsline {subsubsection}{{Q-Value Function}}{13}{section*.13}%
-\contentsline {subsubsection}{{Action Selection Policy}}{14}{section*.14}%
-\contentsline {subsubsection}{{Reward Function}}{14}{section*.15}%
-\contentsline {subsubsection}{{Update Rule}}{15}{section*.16}%
-\contentsline {section}{\numberline {3.6}{Deadlock Avoidance}}{15}{section.3.6}%
-\contentsline {chapter}{\numberline {4}{Evaluation}}{17}{chapter.4}%
-\contentsline {section}{\numberline {4.1}{Simulation Setup}}{17}{section.4.1}%
-\contentsline {section}{\numberline {4.2}{Garnet Synthetic Traffic and Evaluation Metrics}}{18}{section.4.2}%
-\contentsline {section}{\numberline {4.3}{Results}}{19}{section.4.3}%
-\contentsline {subsubsection}{{Acceleration Factor}}{19}{section*.17}%
-\contentsline {subsubsection}{{Latency Analysis}}{20}{section*.20}%
-\contentsline {chapter}{{Bibliography}}{26}{chapter*.25}%
+\contentsline {section}{\numberline {1.1}{Problem Statement}}{4}{section.1.1}%
+\contentsline {section}{\numberline {1.2}{Scope of Research}}{5}{section.1.2}%
+\contentsline {chapter}{\numberline {2}{Literature Review}}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}{Introduction to Routing Algorithms in NoCs}}{7}{section.2.1}%
+\contentsline {section}{\numberline {2.2}{Congestion-Aware Routing Algorithms}}{8}{section.2.2}%
+\contentsline {section}{\numberline {2.3}{Fault-Tolerant Routing Algorithms}}{10}{section.2.3}%
+\contentsline {section}{\numberline {2.4}{Aging-Aware Routing Algorithms}}{12}{section.2.4}%
+\contentsline {section}{\numberline {2.5}{Motivation for Learning-Based Aging-Aware Routing}}{14}{section.2.5}%
+\contentsline {chapter}{\numberline {3}{Aging-Aware Routing Algorithm System Design}}{16}{chapter.3}%
+\contentsline {section}{\numberline {3.1}{Dynamic Temperature Variation}}{16}{section.3.1}%
+\contentsline {section}{\numberline {3.2}{Process Variation}}{18}{section.3.2}%
+\contentsline {section}{\numberline {3.3}{Aging Models}}{21}{section.3.3}%
+\contentsline {subsubsection}{{Electromigration (EM)}}{21}{section*.14}%
+\contentsline {subsubsection}{{Hot-Carrier Injection (HCI)}}{22}{section*.15}%
+\contentsline {subsubsection}{{Utilization of Lifetime Models}}{24}{section*.16}%
+\contentsline {section}{\numberline {3.4}{Reinforcement Learning-Based Routing Policy}}{24}{section.3.4}%
+\contentsline {subsubsection}{{State Representation}}{26}{section*.18}%
+\contentsline {subsubsection}{{Q-Value Function}}{26}{section*.19}%
+\contentsline {subsubsection}{{Action Selection Policy}}{27}{section*.20}%
+\contentsline {subsubsection}{{Reward Function}}{27}{section*.21}%
+\contentsline {subsubsection}{{Update Rule}}{28}{section*.22}%
+\contentsline {section}{\numberline {3.5}{Deadlock Avoidance}}{29}{section.3.5}%
+\contentsline {subsubsection}{{Router Microarchitecture}}{29}{section*.23}%
+\contentsline {subsubsection}{{Deadlock Formation}}{30}{section*.25}%
+\contentsline {subsubsection}{{Deadlock Avoidance Using Escape Virtual Channels}}{31}{section*.27}%
+\contentsline {chapter}{\numberline {4}{Evaluation}}{32}{chapter.4}%
+\contentsline {section}{\numberline {4.1}{Simulation Setup}}{32}{section.4.1}%
+\contentsline {section}{\numberline {4.2}{Garnet Synthetic Traffic and Evaluation Metrics}}{33}{section.4.2}%
+\contentsline {section}{\numberline {4.3}{Results}}{34}{section.4.3}%
+\contentsline {subsubsection}{{Acceleration Factor}}{34}{section*.28}%
+\contentsline {paragraph}{{Electromigration (EM) Results}}{35}{section*.31}%
+\contentsline {paragraph}{{Hot-Carrier Injection (HCI) Results}}{36}{section*.32}%
+\contentsline {paragraph}{{Discussion}}{36}{section*.33}%
+\contentsline {subsubsection}{{Latency Analysis}}{37}{section*.34}%
+\contentsline {chapter}{\numberline {5}{Limitations and Future Work}}{42}{chapter.5}%
+\contentsline {section}{\numberline {5.1}{Limitations}}{42}{section.5.1}%
+\contentsline {section}{\numberline {5.2}{Future Work}}{42}{section.5.2}%
+\contentsline {chapter}{\numberline {6}{Conclusion}}{44}{chapter.6}%
+\contentsline {chapter}{{Bibliography}}{45}{chapter*.39}%
 \contentsline {part}{{Appendices}}{}{}
-\contentsline {chapter}{\numberline {A}{Mean Acceleration Factor}}{29}{appendix.A}%
-\contentsline {section}{\numberline {A.1}{Mean Acceleration Factor (AF) Trends Across Injection Rates}}{29}{section.A.1}%
+\contentsline {chapter}{\numberline {A}{Mean Acceleration Factor}}{49}{appendix.A}%
+\contentsline {section}{\numberline {A.1}{Mean Acceleration Factor (AF) Trends Across Injection Rates}}{49}{section.A.1}%
+\contentsline {chapter}{\numberline {B}{Access to Research Work}}{52}{appendix.B}%
+\contentsline {section}{\numberline {B.1}{Code}}{52}{section.B.1}%

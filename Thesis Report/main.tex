@@ -124,7 +124,7 @@
 
 \begin{abstract}                %% Mandatory -  maximum 350 words
 
-As chip multiprocessors scale, Network-on-Chip (NoC) reliability becomes a critical concern due to aging mechanisms such as electromigration (EM) and hot-carrier injection (HCI), which are strongly dependent on traffic-induced switching activity and temperature. Conventional routing algorithms such as dimension-order routing (DOR) are oblivious to these effects, leading to uneven wear and reduced system lifetime. This work presents a reinforcement learning (RL)-based adaptive routing framework that incorporates aging awareness directly into routing decisions. Each router operates as a distributed RL agent using linear function approximation, with EM and HCI-based mean time to failure (MTTF) estimates integrated into the state and reward formulation. Deadlock freedom is ensured through an escape virtual channel using deterministic routing. The approach is evaluated using the gem5 Garnet simulator on an $8 \times 8$ mesh across multiple synthetic traffic patterns. Results show significant lifetime improvements, achieving up to $5.3\times$ acceleration in EM lifetime and consistent gains for HCI, while maintaining or improving packet latency by distributing traffic more evenly and delaying network saturation. This work demonstrates that RL-based routing can effectively improve NoC reliability without compromising performance.
+As chip multiprocessors scale, the reliability of Network-on-Chip (NoC) interconnects becomes increasingly critical due to aging mechanisms such as electromigration (EM) and hot-carrier injection (HCI), which are strongly influenced by traffic-induced switching activity and temperature. Conventional routing algorithms, such as dimension-order routing (DOR), are oblivious to these effects and can lead to uneven stress distribution and premature failure of network components. This work presents a reinforcement learning (RL)-based adaptive routing framework that incorporates aging awareness directly into routing decisions. Each router operates as a distributed RL agent using linear function approximation, where EM and HCI based mean time to failure (MTTF) estimates are integrated into the feature representation and reward function. The proposed approach is evaluated using the gem5 Garnet cycle-accurate simulator on an $8 \times 8$ mesh across multiple synthetic traffic patterns, and is compared against both DOR and the state-of-the-art aging-aware Clotho routing scheme. Results show that the RL-based approach achieves up to $\sim5\times$ improvement in EM lifetime and consistent gains in HCI lifetime compared to DOR. Compared to Clotho, the proposed method achieves improved reliability under several structured traffic patterns, while maintaining competitive packet latency across all evaluated scenarios. This work highlights the potential of reinforcement learning as a scalable and flexible framework for reliability-aware NoC routing.
 
 \end{abstract}
 
@@ -148,6 +148,8 @@ As chip multiprocessors scale, Network-on-Chip (NoC) reliability becomes a criti
 \include{body_chapters/chap_2/chap_2}
 \include{body_chapters/chap_3/chap_3}
 \include{body_chapters/chap_4/chap_4}
+\include{body_chapters/chap_5/chap_5}
+\include{body_chapters/chap_6/chap_6}
 
 
 % Insert the bibliography
@@ -160,7 +162,7 @@ As chip multiprocessors scale, Network-on-Chip (NoC) reliability becomes a criti
 \appendix
 % Add as many of the following statements as you need. 
 \include{body_chapters/chap_a1/chap_a1}
-% \include{body_chapters/chap_a2/chap_a2}
+\include{body_chapters/chap_a2/chap_a2}
 
 
 

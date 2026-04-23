@@ -19,50 +19,56 @@ Reallocating 'name_of_file' (item size: 1) to 32 items.
 A level-1 auxiliary file: body_chapters/chap_3/chap_3.aux
 Reallocating 'name_of_file' (item size: 1) to 32 items.
 A level-1 auxiliary file: body_chapters/chap_4/chap_4.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: body_chapters/chap_5/chap_5.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: body_chapters/chap_6/chap_6.aux
 Reallocating 'name_of_file' (item size: 1) to 6 items.
 The style file: unsrt.bst
 Reallocating 'name_of_file' (item size: 1) to 11 items.
 Reallocating 'name_of_file' (item size: 1) to 34 items.
 A level-1 auxiliary file: body_chapters/chap_a1/chap_a1.aux
+Reallocating 'name_of_file' (item size: 1) to 34 items.
+A level-1 auxiliary file: body_chapters/chap_a2/chap_a2.aux
 Database file #1: sample_bib.bib
-You've used 16 entries,
+You've used 28 entries,
             1791 wiz_defined-function locations,
-            563 strings with 9122 characters,
-and the built_in function-call counts, 5992 in all, are:
-= -- 403
-> -- 475
-< -- 10
-+ -- 164
-- -- 148
-* -- 485
-:= -- 958
-add.period$ -- 47
-call.type$ -- 16
-change.case$ -- 16
+            653 strings with 11954 characters,
+and the built_in function-call counts, 9547 in all, are:
+= -- 703
+> -- 637
+< -- 16
++ -- 222
+- -- 194
+* -- 722
+:= -- 1477
+add.period$ -- 83
+call.type$ -- 28
+change.case$ -- 28
 chr.to.int$ -- 0
-cite$ -- 16
-duplicate$ -- 242
-empty$ -- 496
-format.name$ -- 148
-if$ -- 1341
+cite$ -- 28
+duplicate$ -- 413
+empty$ -- 849
+format.name$ -- 194
+if$ -- 2184
 int.to.chr$ -- 0
-int.to.str$ -- 16
-missing$ -- 15
-newline$ -- 82
-num.names$ -- 16
-pop$ -- 72
+int.to.str$ -- 28
+missing$ -- 27
+newline$ -- 142
+num.names$ -- 28
+pop$ -- 114
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 152
+skip$ -- 257
 stack$ -- 0
-substring$ -- 331
-swap$ -- 98
-text.length$ -- 10
+substring$ -- 587
+swap$ -- 162
+text.length$ -- 16
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
 warning$ -- 0
-while$ -- 41
-width$ -- 18
-write$ -- 175
+while$ -- 70
+width$ -- 30
+write$ -- 307

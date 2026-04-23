@@ -2,59 +2,72 @@
 
 \section{Simulation Setup}
 
-All simulations are conducted using the gem5 Garnet cycle-accurate NoC simulator \cite{gem5} \cite{lowepower2020gem5simulatorversion200} in standalone synthetic traffic mode, without a full CPU or ISA model, to isolate network behavior. The network consists of 64 nodes arranged in an $8 \times 8$ 2D mesh topology. Each node acts as both a traffic source and destination, with packets injected according to configurable synthetic traffic patterns at a specified rate in packets per cycle per node.
+All simulations are conducted using the gem5 Garnet cycle-accurate simulator \cite{gem5} \cite{lowepower2020gem5simulatorversion200} in standalone synthetic traffic mode, without a full CPU or ISA model, to isolate network behavior. The network consists of 64 nodes arranged in an $8 \times 8$ 2D mesh topology. Each node acts as both a traffic source and destination, with packets injected according to configurable synthetic traffic patterns at a specified rate in packets per cycle per node.
 
-The simulated clock frequency is 1 GHz. The router microarchitecture is an input-queued, virtual-channel router with credit-based flow control. Each router has a pipeline latency of 1 cycle and each link has a traversal latency of 1 cycle. The network supports three virtual networks per input port: two control virtual networks (vnets 0 and 1) and one data virtual network (vnet 2). Each virtual network contains 4 virtual channels. Control virtual channels have a buffer depth of 1 flit, while data virtual channels have a buffer depth of 4 flits. Control messages (vnets 0 and 1) consist of a single flit, whereas data messages (vnet 2) consist of 5 flits. The flit width is 128 bits (16 bytes).
+The simulated clock frequency is 1 GHz. The router microarchitecture is an input-queued, virtual-channel router with credit-based flow control. Each router has a pipeline latency of 1 cycle and each link has a traversal latency of 1 cycle. The network supports three virtual networks per input port. Each virtual network contains 4 virtual channels. Control virtual channels have a buffer depth of 1 flit, while data virtual channels have a buffer depth of 4 flits. Control messages consist of a single flit, whereas data messages consist of 5 flits. The flit width is 128 bits (16 bytes).
 
-The RL-based routing agent is trained over 50 million cycles, using uniform random traffic at an injection rate of 0.2 packets/cycle/node. The learned weight vectors are saved at the end of training run. The learning rate ($\alpha$), exploration rate ($\epsilon$), and discount factor ($\gamma$) are set to 0.01, 0.1, and 0.9, respectively.
+This work evaluates three routing algorithms: deterministic dimension-order routing (DOR), the Clotho-GAR routing approach proposed in Clotho \cite{Clotho2015}, and the proposed RL-based routing policy. The Clotho framework is implemented as described in the original work to provide a direct comparison against a state-of-the-art aging-aware routing algorithm.
 
-For evaluation, the exploration rate is set to $\epsilon = 0$, resulting in a purely greedy policy with no further updates. Both the RL-based routing scheme and the DOR baseline are evaluated across a range of injection rates. Each configuration is simulated for 50 million cycles across multiple synthetic traffic patterns, including uniform random, neighbor, transpose, shuffle, bit reverse, and bit rotation.
+Unlike conventional RL workflows that separate training and evaluation phases, the proposed routing policy is learned online during simulation. Each run is executed for 50 million cycles, during which the RL agent continuously updates its parameters while routing packets. This allows the policy to adapt dynamically to traffic conditions and evolving network state without requiring a dedicated training phase.
 
-The wearout state used in the RL reward is updated periodically during simulation. Link and router utilization are sampled every 1,000 cycles as a windowed average. The spatially correlated temperature map is regenerated every $10^7$ cycles. Process variation parameters ($\Delta V_{th}$, $\Delta L_{eff}$) are sampled once at initialization, ensuring identical per-router $I_{sub}$ values across both RL and DOR runs.
+The learning rate ($\alpha$), exploration rate ($\epsilon$), and discount factor ($\gamma$) are set to 0.01, 0.1, and 0.9, respectively. The exploration rate remains constant throughout simulation, allowing continued exploration of routing decisions while gradually refining the policy. All routing algorithms are evaluated across a range of injection rates and synthetic traffic patterns. Each configuration is simulated for 50 million cycles.
+
+The wearout state used in the RL reward is updated periodically during simulation. Link and router utilization are sampled every 1,000 cycles using a sliding window average. The spatial temperature map is regenerated every $10^7$ cycles to reflect dynamic thermal variation. Process variation parameters ($\Delta V_{th}$ and $\Delta L_{eff}$) are sampled once at initialization, ensuring that all routing algorithms operate under identical per-router $I_{sub}$ values.
 
 \section{Garnet Synthetic Traffic and Evaluation Metrics}
 
-To evaluate the proposed routing approach under a wide range of network conditions, simulations are conducted using seven synthetic traffic patterns: uniform random, neighbor, transpose, tornado, shuffle, bit reverse, and bit rotation. These patterns generate diverse spatial load distributions, resulting in different stress profiles across routers and links and near 100\% network utilization.
+To evaluate the proposed routing approach under diverse network conditions, simulations are conducted using seven synthetic traffic patterns: uniform random, neighbor, transpose, tornado, shuffle, bit reverse, and bit rotation. These patterns generate a wide range of communication behaviors, resulting in different load distributions across routers and links, and consequently different aging and congestion profiles.
 
-Uniform random traffic selects destinations uniformly, producing a balanced load across the network. Neighbor traffic restricts communication to adjacent nodes. Transpose traffic maps each node at position $(i, j)$ to $(j, i)$. Tornado traffic sends packet from a node (i, j) in a NxM mesh to a destination node which is offset by roughly half the circumference of the mesh. Shuffle, bit reverse, and bit rotation are structured permutation patterns derived from bitwise transformations of node indices, which create asymmetric and pattern-dependent congestion across the network.
+Uniform random traffic selects destinations randomly across all nodes, producing a balanced load throughout the network. Neighbor traffic restricts communication to adjacent nodes, resulting in highly localized traffic. Transpose traffic maps each node at position $(i,j)$ to $(j,i)$, creating structured long-distance communication. Tornado traffic sends packets from node $(i,j)$ to a node offset by approximately half the network dimension, generating high contention in specific regions of the mesh. Shuffle, bit reverse, and bit rotation are permutation-based traffic patterns derived from bitwise transformations of node indices, producing structured yet asymmetric traffic flows that stress different regions of the network.
 
-For each traffic pattern, injection rates are swept to capture both low-load and high-load regimes. For uniform random and neighbor traffic, injection rates range from 0.01 to 0.40 packets/cycle/node in increments of 0.03. For the remaining patterns, injection rates range from 0.01 to 0.20 in increments of 0.01. Each configuration is simulated for 50 million cycles.
+For each traffic pattern, injection rates are swept to capture both low-load and saturation regimes. For uniform random and neighbor traffic, injection rates range from 0.01 to 0.40 packets/cycle/node in increments of 0.03. For the remaining traffic patterns, injection rates range from 0.01 to 0.20 in increments of 0.01. Each configuration is simulated for 50 million cycles to ensure sufficient observation of both transient and steady-state behavior.
 
-The evaluation focuses on both performance and reliability metrics. Performance is characterized using average packet latency and throughput, while reliability is assessed using the AF derived from EM and HCI lifetime models. Together, these metrics provide a comprehensive view of the trade-offs between network efficiency and long-term wear.
+The evaluation considers both performance and reliability metrics. Performance is measured using average packet latency. Reliability is evaluated using the acceleration factor (AF) derived from the EM and HCI lifetime models. AF measures the relative improvement in MTTF under a given routing algorithm compared to the DOR baseline. By combining performance and reliability metrics, the evaluation captures the trade-offs between network efficiency and long-term wear.
 
 \section{Results}
 
 \subsubsection{Acceleration Factor}
 
-To summarize the reliability improvements across traffic patterns, the mean Acceleration Factor (AF) for the weakest 10\% of components is presented using bar charts (Figures~\ref{fig:af_links_bar} and \ref{fig:af_routers_bar}). Detailed AF trends as a function of injection rate are provided in the appendix \ref{chap:app1}.
+To summarize the reliability improvements across traffic patterns, the mean Acceleration Factor (AF) for the weakest 10\% of components is presented using bar charts (Figures~\ref{fig:af_links_bar} and \ref{fig:af_routers_bar}). Detailed AF trends as a function of injection rate are provided in Appendix~\ref{chap:app1}.
 
 \begin{figure}[ht]
-  \begin{center}
-      \includegraphics[width=0.95\linewidth]{body_chapters/chap_4/figs/af_weak10_bar_links.png}
-      \caption[Mean EM Wear in Links]{Mean Acceleration Factor (AF) for the weakest 10\% of links under EM wear across different traffic patterns.}
-      \label{fig:af_links_bar}
-  \end{center}
+  \centering
+  \includegraphics[width=1\linewidth]{body_chapters/chap_4/figs/af_weak10_bar_links.png}
+  \caption[Mean EM Wear in Links]{Mean Acceleration Factor (AF) for the weakest 10\% of links under EM wear across different traffic patterns.}
+  \label{fig:af_links_bar}
 \end{figure}
 
 \begin{figure}[ht]
-  \begin{center}
-      \includegraphics[width=0.95\linewidth]{body_chapters/chap_4/figs/af_weak10_bar_routers.png}
-      \caption[Mean HCI Wear in Routers]{Mean Acceleration Factor (AF) for the weakest 10\% of routers under HCI wear across different traffic patterns.}
-      \label{fig:af_routers_bar}
-  \end{center}
+  \centering
+  \includegraphics[width=1\linewidth]{body_chapters/chap_4/figs/af_weak10_bar_routers.png}
+  \caption[Mean HCI Wear in Routers]{Mean Acceleration Factor (AF) for the weakest 10\% of routers under HCI wear across different traffic patterns.}
+  \label{fig:af_routers_bar}
 \end{figure}
 
-Overall, the proposed RL-based routing achieves significant improvements in lifetime compared to DOR, with consistently higher AF values across most traffic patterns. As expected, the improvement is more pronounced for EM than for HCI due to the quadratic dependence of EM lifetime on switching activity. Redistributing traffic away from heavily utilized links therefore yields substantial gains in EM lifetime, whereas HCI, with its linear dependence and sensitivity to process variation, exhibits more modest improvements.
+Overall, both the proposed RL-based routing and the Clotho aging-aware routing approach achieve significant improvements in lifetime compared to DOR. As expected, the improvement is more pronounced for EM than for HCI due to the quadratic dependence of EM lifetime on switching activity. Redistributing traffic away from heavily utilized links therefore yields substantial gains in EM lifetime, whereas HCI, with its linear dependence and sensitivity to process variation, exhibits more modest improvements.
 
-For EM wear (links), the largest improvement is observed under uniform random traffic, where AF reaches approximately $5.3\times$. This reflects the ability of the RL policy to effectively balance load in a scenario with high path diversity. Shuffle and bit rotation traffic patterns yield similar improvements of approximately $2.3\times$, while bit reverse achieves around $2.5\times$. In contrast, transpose, neighbor, and tornado traffic show significantly lower gains, with AF values of approximately $1.25\times$ for transpose and close to $1.0\times$ for tornado and neighbor. This is expected, as these traffic patterns constrain packets to a limited set of shortest paths, forcing traffic through central or local links where routing flexibility is reduced.
+\paragraph{Electromigration (EM) Results}
 
-For HCI wear (routers), a similar trend is observed, though with lower overall gains. Uniform random traffic again provides the highest improvement, with an AF of approximately $2.3\times$. Shuffle and bit rotation yield moderate improvements of around $1.2\times$. Bit reverse shows a slight improvement, while tornado and neighbor traffic exhibit little to no gain over DOR. In particular, the RL routing algorithm performs slightly worse under transpose traffic, as the routing options repeatedly stress the same set of routers along fixed shortest paths.
+For link-level EM wear, both the proposed RL-based routing and the Clotho-GAR approach significantly outperform DOR under several traffic patterns. Under uniform random traffic, both methods achieve substantial improvements, with Clotho reaching approximately $5.15\times$ and RL achieving $4.72\times$ improvement in MTTF. A similar trend is observed for transpose traffic, where both approaches provide modest improvements of approximately $1.4\times$. However, the performance diverges under structured and asymmetric traffic patterns. For shuffle traffic, RL achieves a $2.83\times$ improvement, significantly outperforming Clotho, which provides only $1.28\times$. Similar trends are observed for bit reverse ($2.74\times$ vs. $1.70\times$) and bit rotation ($2.61\times$ vs. $1.41\times$). In contrast, both approaches show no improvement over DOR for tornado and neighbor traffic, indicating that these patterns either inherently balance load or offer limited routing flexibility.
 
-These results highlight two key observations. First, the effectiveness of RL-based routing is strongly dependent on the availability of path diversity. Traffic patterns that allow multiple routing choices benefit the most from adaptive routing. Second, EM benefits more than HCI due to its higher sensitivity to load redistribution, making it the dominant factor in overall lifetime improvement.
+These results highlight a key distinction between the two approaches. Clotho, which relies on predefined heuristics and explicit aging models, performs strongly under traffic patterns that align with its assumptions, such as uniform random traffic. However, its effectiveness degrades under traffic patterns with more complex or asymmetric load distributions. In contrast, the RL-based approach maintains strong performance across a wider range of patterns, demonstrating its ability to adapt routing decisions based on observed network conditions.
+
+\paragraph{Hot-Carrier Injection (HCI) Results}
+
+A similar trend is observed for router-level HCI wear, although the magnitude of improvement is smaller due to the weaker dependence of HCI on switching activity. Under uniform traffic, both RL and Clotho achieve comparable improvements of approximately $2.15\times$.
+
+Under transpose traffic, both approaches perform worse than DOR, with RL achieving $0.65\times$ and Clotho $0.83\times$, indicating that traffic redistribution in this case introduces additional stress on critical paths. This highlights the sensitivity of HCI to routing decisions that may inadvertently concentrate activity on specific routers. For shuffle, bit reverse, and bit rotation traffic, the RL-based approach consistently outperforms both DOR and Clotho. In shuffle traffic, RL achieves $1.19\times$ improvement, while Clotho degrades to $0.96\times$. Similar behavior is observed for bit reverse ($1.20\times$ vs. $0.89\times$) and bit rotation ($1.39\times$ vs. $0.95\times$). These results indicate that Clotho’s heuristic-based routing can inadvertently increase stress under certain traffic patterns, while RL is able to avoid such degradation.
+
+
+\paragraph{Discussion}
+
+These results highlight two key observations. First, the effectiveness of adaptive routing is strongly dependent on path diversity. Traffic patterns that allow multiple routing choices benefit the most from load redistribution, while patterns with constrained paths show limited improvement.
+
+Second, the RL-based routing approach demonstrates greater robustness across traffic patterns compared to Clotho. While Clotho performs well under traffic conditions that align with its heuristic design, its performance degrades under asymmetric or complex traffic patterns. In contrast, the RL-based approach maintains consistent improvements by adapting its routing decisions during execution. This behavior can be attributed to the fundamental difference in how the two approaches make routing decisions. Clotho relies on fixed heuristic models to evaluate path reliability, which limits its ability to adapt when traffic patterns deviate from expected behavior. The RL-based approach, on the other hand, continuously updates its policy during execution, allowing it to learn and adapt to the current traffic distribution and evolving network state. As a result, the RL-based routing policy is better able to respond to varying and evolving traffic patterns, leading to more effective stress distribution and improved overall reliability.
 
 \subsubsection{Latency Analysis}
 
-To evaluate the performance impact of the proposed routing scheme, average packet latency is measured as a function of injection rate across all traffic patterns. Representative latency curves are shown in Figures~\ref{fig:latency_curves_1}, \ref{fig:bit_rotation_latency}, \ref{fig:latency_curves_2}, \ref{fig:latency_curves_3}.
+To evaluate the performance impact of the proposed routing algorithm, average packet latency is measured as a function of injection rate across all traffic patterns. Representative latency curves are shown in Figures~\ref{fig:latency_curves_1}, \ref{fig:bit_rotation_latency}, \ref{fig:latency_curves_2}, and \ref{fig:latency_curves_3}.
 
 \begin{figure}[ht]
   \centering
@@ -121,13 +134,11 @@ To evaluate the performance impact of the proposed routing scheme, average packe
   \label{fig:latency_curves_3}
 \end{figure}
 
-Across all traffic patterns, the RL-based routing achieves latency comparable to or better than the DOR baseline. At low injection rates, both routing schemes exhibit nearly identical latency. This is expected, as the network is lightly loaded and there is limited contention, leaving little opportunity for adaptive routing to improve performance.
+Across all traffic patterns, both the RL-based routing and the Clotho-GAR approach achieve latency comparable to or better than the DOR baseline. At low injection rates, all routing algorithms exhibit nearly identical latency, as the network is lightly loaded and contention is minimal. At higher injection rates, the benefits of adaptive routing become more apparent. DOR saturates earlier due to its deterministic nature, which concentrates traffic along fixed paths and creates congestion hotspots. In contrast, both RL and Clotho distribute traffic more evenly across available paths, delaying the onset of congestion and maintaining lower latency under higher load conditions.
 
-At higher injection rates, the benefits of RL-based routing become more apparent. As traffic increases, DOR begins to saturate due to its deterministic nature, which concentrates traffic along fixed paths and creates congestion hotspots. This results in a sharp increase in packet latency beyond the saturation point. In contrast, the RL-based routing distributes traffic more evenly across available paths, delaying the onset of congestion and maintaining lower latency under higher load conditions.
+For most traffic patterns, including uniform random, shuffle, bit rotation, neighbor, and tornado, RL and Clotho achieve similar latency performance. In these cases, both approaches effectively balance load and avoid congestion, resulting in comparable improvements over DOR. However, differences emerge under certain structured traffic patterns. In transpose and bit reverse traffic, Clotho achieves slightly lower latency than RL at higher injection rates. This indicates that Clotho's precomputation strategy allows it to more effectively minimize congestion in these scenarios. These observations highlight an important trade-off. Under bit reverse traffic, RL achieves significantly higher reliability improvement compared to Clotho, as shown in the AF results, but incurs a slight latency penalty. Similarly, under transpose traffic, RL improves link wear relative to DOR but performs slightly worse than Clotho in both latency and overall reliability metrics. 
 
-The most significant latency improvements are observed in structured traffic patterns such as bit reverse, bit rotation, shuffle, transpose, and uniform random. These patterns provide multiple routing options, allowing the RL agent to effectively balance load and avoid congested regions. In these cases, RL not only improves reliability but also enhances network performance.
-
-For neighbor and tornado traffic, both routing schemes exhibit similar latency. This is expected, as these patterns constrain packets to a limited set of shortest paths, leaving little flexibility for adaptive routing to redistribute traffic. As a result, RL does not provide a noticeable performance advantage in these scenarios, but importantly, it does not degrade performance either.
+Despite these localized differences, the RL-based routing approach maintains competitive latency across all traffic patterns without significant degradation. Its performance remains close to Clotho while providing more consistent reliability improvements across diverse traffic conditions. Overall, these results demonstrate that RL-based routing is able to achieve a balanced trade-off between performance and reliability. While heuristic-based approaches such as Clotho may outperform RL under specific traffic patterns, RL offers more robust performance across varying and unpredictable traffic conditions, making it better suited for dynamic NoC environments.
 
 % This is a reference to a label in another chapter. Appendix~\ref{chap:app1}. You can always refer to other labels from other chapters with the \textbf{\textbackslash ref} command. 
 
