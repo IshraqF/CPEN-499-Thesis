@@ -2,28 +2,15 @@
 
 This section presents the system-level modeling framework and design choices used to enable reliability-aware routing in the NoC. The proposed approach integrates dynamic temperature variation, process variation, and aging models for EM and HCI directly into the routing decision process. These models are based on prior work in \cite{Clotho2015} and are combined with a reinforcement learning-based routing policy inspired by LARE \cite{LARE2023}.
 
-Although other aging mechanisms, such as Bias Temperature Instability (BTI), also affect CMOS devices, they are not considered here. As discussed in \cite{Clotho2015}, BTI degradation is primarily associated with underutilized circuits and can be mitigated using techniques such as \textit{Use it or Lose it} \cite{Kim2013}. In contrast, EM and HCI are driven by switching activity and temperature, making them closely tied to traffic patterns and more appropriate for routing-level optimization.
+Although other aging mechanisms, such as Bias Temperature Instability (BTI), also affect CMOS devices, they are not considered here. As discussed in \cite{Clotho2015}, BTI degradation is primarily associated with underutilized circuits and can be mitigated using techniques such as \textit{Use it or Lose it} \cite{Kim2013}. In contrast, EM and HCI are driven by switching activity and temperature \cite{Clotho2015}, making them closely tied to traffic patterns and more appropriate for routing-level optimization.
 
-Unlike conventional routing algorithms that optimize only performance metrics such as latency and throughput, this framework incorporates device-level reliability into routing decisions. Temperature and utilization are modeled as dynamic runtime inputs, while process variation is treated as a static parameter determined during initialization.
-
-\section{Dynamic Temperature Variation}
-
-Temperature is one of the primary factors governing the rate of both EM and HCI induced aging, and is therefore modeled explicitly as a dynamic runtime parameter. In a CMP, temperature is not spatially uniform. Instead, it varies across the die due to non-uniform activity in the processing and memory resources, which arises from application mapping, workload imbalance, and differences in instruction behavior. Following the modeling approach used in Clotho \cite{Clotho2015}, the chip is partitioned into an $n \times n$ grid of equal-area tiles. Each tile represents a thermal region containing one processing core, its associated cache resources, and the locally connected router with its nearest-neighbor bidirectional links. Within each tile, temperature is assumed to be uniform, while different tiles may exhibit different temperatures. This assumption is justified by the observation that the NoC contributes only a relatively small fraction of the total chip power budget, and that this power is spatially distributed across the die rather than concentrated in a small number of locations. Consequently, the dominant source of thermal variation is taken to be the computational activity of the processing elements, while the routers are treated as thermally coupled to the tiles that contain them \cite{Clotho2015}.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.95\linewidth]{body_chapters/chap_3/figs/temperature_map.png}
-    \caption[Per-router temperature map]{Example spatial mapping of temperature across the NoC. The map reflects the combination of spatially correlated thermal variation.}
-    \label{fig:temp_maps}
-\end{figure}
-
-Temperature is modeled as a slowly varying parameter rather than as a quantity that changes every cycle. In Clotho, the absolute values of the temperature map are updated every $10^7$ cycles in order to emulate the gradually changing thermal behavior of a running CMP, consistent with prior observations that on-chip temperature sensing and thermal evolution occur over millisecond-scale intervals rather than cycle-by-cycle timescales \cite{Clotho2015}. The same assumption is adopted here. Accordingly, the temperature map is periodically refreshed every $10^7$ cycles, allowing the routing algorithm to respond to long-term changes in the thermal profile without introducing unnecessary per-cycle thermal recomputation. The temperature assigned to each tile is generated as part of a spatial temperature map spanning the range of 65$^\circ$C to 85$^\circ$C, consistent with the range used in Clotho \cite{Clotho2015}. In implementation, these values are generated using a random but spatially correlated distribution so that neighboring tiles tend to exhibit similar thermal behavior. Figure \ref{fig:temp_maps} illustrates an example of such a temperature map. This per-tile temperature information is then used directly by the EM and HCI aging models. Since both failure mechanisms accelerate at higher temperatures, tiles operating at elevated temperature accumulate wear more rapidly than cooler tiles under otherwise similar activity conditions.
+Unlike conventional RL routing algorithms that optimize only performance metrics such as latency and throughput, this framework incorporates device-level reliability into routing decisions. Temperature and utilization are modeled as dynamic runtime inputs, while process variation is treated as a static parameter determined during initialization.
 
 \section{Process Variation}
 
-Process variation (PV) arises from fabrication-time imprecision and results in deviations of transistor parameters from their nominal values. As CMOS technology scales, these variations become more pronounced and introduce spatial non-uniformity in device characteristics across the chip. In the context of NoC reliability, PV plays an important role in modulating aging behavior, particularly for HCI, where transistor-level characteristics directly influence degradation rates \cite{Clotho2015}.
+Process variation (PV) arises from fabrication-time imprecision and results in deviations of transistor parameters from their nominal values. As CMOS technology scales, these variations become more pronounced and introduce spatial non-uniformity in device characteristics across the chip. In the context of NoC reliability, PV plays an important role in modulating aging behavior, particularly for HCI, where transistor-level characteristics directly influence degradation rates \cite{JEDEC122G}.
 
-Following the Clotho model, PV is captured by considering variations in two key transistor parameters: the threshold voltage ($V_{th}$) and the effective gate length ($L_{eff}$). For each router, these parameters are modeled as:
+Following the model described in \cite{Clotho2015}, PV is captured by considering variations in two key transistor parameters: the threshold voltage ($V_{th}$) and the effective gate length ($L_{eff}$). For each router, these parameters are modeled as:
 \begin{equation}
 V_{th} = V_{th0} + \Delta V_{th}, \quad V_{th0} = 179\ \text{mV}
 \end{equation}
@@ -31,7 +18,7 @@ V_{th} = V_{th0} + \Delta V_{th}, \quad V_{th0} = 179\ \text{mV}
 L_{eff} = L_{eff0} + \Delta L_{eff}, \quad L_{eff0} = 14.4\ \text{nm}
 \end{equation}
 
-The deviations $\Delta V_{th}$ and $\Delta L_{eff}$ are composed of two independent components:
+The deviations $\Delta V_{th}$ and $\Delta L_{eff}$ are composed of two independent components: systematic variation, and random variation \cite{Kuhn2011}.
 \begin{equation}
 \Delta V_{th} = \Delta V_{th,rand} + \Delta V_{th,sys}
 \end{equation}
@@ -39,7 +26,7 @@ The deviations $\Delta V_{th}$ and $\Delta L_{eff}$ are composed of two independ
 \Delta L_{eff} = \Delta L_{eff,rand} + \Delta L_{eff,sys}
 \end{equation}
 
-Systematic variation represents spatially correlated deviations caused by layout-dependent and process-wide effects. Neighboring regions of the chip tend to exhibit similar variation values. As in Clotho, systematic variation is modeled using a multivariate normal distribution with a spherical spatial correlation structure. The correlation between two regions depends only on their Euclidean distance $r$:
+Systematic variation represents spatially correlated deviations caused by layout-dependent and process-wide effects \cite{Sarangi2008}. Neighboring regions of the chip tend to exhibit similar variation values. Systematic variation is modeled using a multivariate normal distribution with a spherical spatial correlation structure \cite{Sarangi2008}. The correlation between two regions depends only on their Euclidean distance $r$. The spherical correlation function is defined as \cite{Sarangi2008}:
 \begin{equation}
 \rho(r) =
 \begin{cases}
@@ -49,12 +36,12 @@ Systematic variation represents spatially correlated deviations caused by layout
 \end{equation}
 where $\phi$ represents the correlation range expressed as a fraction of the die length. In this work, $\phi = 0.5$, meaning that routers separated by more than half the die are effectively uncorrelated. Within a single region, variation is fully correlated ($\rho(0) = 1$), while distant regions exhibit no correlation \cite{Clotho2015}.
 
-Random variation, in contrast, is uncorrelated and occurs at a much finer granularity, reflecting device-level fluctuations such as dopant variation. Both random and systematic components are assumed to follow normal distributions with zero mean. Since these components are independent, the total variation also follows a normal distribution with:
+Random variation, in contrast, is uncorrelated and occurs at a much finer granularity, reflecting device-level fluctuations such as dopant variation. Both random and systematic components are assumed to follow normal distributions with zero mean \cite{Kuhn2011}. Since these components are independent, the total variation also follows a normal distribution, defined as \cite{Clotho2015}:
 \begin{equation}
 \sigma_{total} = \sqrt{\sigma_{rand}^2 + \sigma_{sys}^2}
 \end{equation}
 
-The parameter values used in this work are taken directly from Clotho and are summarized as follows:
+The parameter values used in this work are taken directly from \cite{Clotho2015} and are summarized as follows:
 \begin{itemize}
     \item For $V_{th}$: $\sigma_{rand} = 6.3\%$, $\sigma_{sys} = 6.3\%$
     \item For $L_{eff}$: $\sigma_{rand} = 3.2\%$, $\sigma_{sys} = 3.2\%$
@@ -63,7 +50,7 @@ The parameter values used in this work are taken directly from Clotho and are su
 
 Process variation is treated as a static property determined at fabrication time. Accordingly, the values of $V_{th}$ and $L_{eff}$ are generated once during initialization and remain constant throughout execution. In the implemented model, each router is assigned a fixed pair of $(V_{th}, L_{eff})$ values, which are stored and used throughout the simulation.
 
-To visualize the spatial effect of process variation across the NoC, Figure \ref{fig:pv_maps} illustrates example per-router maps of the generated threshold voltage and effective gate length values. Since the systematic component is spatially correlated, neighboring routers tend to exhibit similar deviations, producing smooth regional variation rather than entirely independent fluctuations. The random component is then superimposed locally, yielding the final per-router values used in the model. Since process variation is not uniform across the chip, different routers may begin operation with different intrinsic susceptibility to HCI-induced degradation.
+To visualize the spatial effect of process variation across the NoC, Figure \ref{fig:pv_maps} illustrates example per-router maps of the generated threshold voltage and effective gate length values. Since the systematic component is spatially correlated, neighboring routers tend to exhibit similar deviations, producing smooth regional variation rather than entirely independent fluctuations. The random component is then superimposed locally, yielding the final per-router values used in the model. Since process variation is not uniform across the chip, different routers may begin operation with different intrinsic susceptibility to HCI induced degradation.
 
 \begin{figure}[ht]
     \centering
@@ -72,7 +59,21 @@ To visualize the spatial effect of process variation across the NoC, Figure \ref
     \label{fig:pv_maps}
 \end{figure}
 
-The resulting per-router values of $V_{th}$ and $L_{eff}$ are subsequently used to compute the substrate current ($I_{sub}$), which serves as an intermediate quantity in the HCI aging model. Since PV is static and all other parameters involved in this computation are technology constants, $I_{sub}$ can be precomputed once at initialization. The computation proceeds as follows:
+The resulting per-router values of $V_{th}$ and $L_{eff}$ are subsequently used to compute the substrate current ($I_{sub}$), which serves as an intermediate quantity in the HCI aging model. Since PV is static and all other parameters involved in this computation are technology constants, $I_{sub}$ can be precomputed once at initialization. The substrate current is calculated as follows \cite{WhiteBernstein2008}:
+
+\begin{equation}
+I_{sub} = C_2 \cdot I_{ds} \cdot \exp\left(\frac{-\phi_i}{q \lambda_e E_m}\right)
+\end{equation}
+
+where $C_2$ is a proportionality constant, $I_{ds}$ is the drain current, $\phi_i$ denotes the minimum energy required for a hot electron to initiate impact ionization, $q$ is the elementary charge, $\lambda_e$ is the mean free path of hot electrons, and $E_m$ is the electric field in the channel. To compute $E_m$, a semi-quntitative analytical model is used, expressed as \cite{WhiteBernstein2008}:
+
+\begin{equation}
+E_m = \frac{V_{ds} - V_{dsat}}{\sqrt{3 t_{ox} x_j}}
+\end{equation}
+
+where $V_{ds}$ denotes the drain-to-source voltage and $V_{dsat}$ corresponds to the voltage at the channel pinch-off point. The term $\sqrt{3 t_{ox} x_j}$ represents a characteristic length associated with the effective thickness of the pinch-off region in the transistor channel. For typical CMOS technologies, this length falls within the range $\sqrt{100\ \text{nm}}$ to $\sqrt{300\ \text{nm}}$ \cite{Clotho2015}.
+
+For short channel devices, $V_{dsat}$ is dependent on the effective gate length and can be modeled as \cite{WhiteBernstein2008}:
 
 \begin{equation}
 V_{dsat} = \frac{(V_{gs} - V_{th}) \cdot L_{eff} \cdot E_{cr}}{(V_{gs} - V_{th}) + L_{eff} \cdot E_{cr}}
@@ -80,45 +81,46 @@ V_{dsat} = \frac{(V_{gs} - V_{th}) \cdot L_{eff} \cdot E_{cr}}{(V_{gs} - V_{th})
 
 where $V_{gs}$ is the gate-to-source voltage, $V_{th}$ is the threshold voltage, and $E_{cr}$ denotes the critical electric field associated with velocity saturation.
 
-\begin{equation}
-E_m = \frac{V_{ds} - V_{dsat}}{\sqrt{3 t_{ox} x_j}}
-\end{equation}
+All parameters other than $V_{th}$ and $L_{eff}$ are treated as technology-dependent constants and are fixed based on values reported in prior work \cite{Clotho2015}. The resulting $I_{sub}$ value is stored as a single scalar per router, eliminating the need for repeated evaluation of the above expressions during runtime. The precomputed $I_{sub}$ is later used in the HCI aging model to determine degradation rates as a function of switching activity and temperature.
 
-where $V_{ds}$ denotes the drain-to-source voltage and $V_{dsat}$ corresponds to the voltage at the channel pinch-off point. The term $\sqrt{3 t_{ox} x_j}$ represents a characteristic length associated with the effective thickness of the pinch-off region in the transistor channel. For typical CMOS technologies, this length falls within the range $\sqrt{100\ \text{nm}}$ to $\sqrt{300\ \text{nm}}$.
+\section{Dynamic Temperature Variation}
 
-\begin{equation}
-I_{sub} = C_2 \cdot I_{ds} \cdot \exp\left(\frac{-\phi_i}{q \lambda_e E_m}\right)
-\end{equation}
+Temperature is one of the primary factors governing the rate of both EM and HCI induced aging, and is therefore modeled explicitly as a dynamic runtime parameter. In a CMP, temperature is not spatially uniform. Instead, it varies across the die due to non-uniform activity in the processing and memory resources, which arises from application mapping, workload imbalance, and differences in instruction behavior \cite{Mulas2009}. Following the modeling approach used in Clotho \cite{Clotho2015}, the chip is partitioned into an $n \times n$ grid of equal-area tiles. Each tile represents a thermal region containing one processing core, its associated cache resources, and the locally connected router with its nearest-neighbor bidirectional links. Within each tile, temperature is assumed to be uniform, while different tiles may exhibit different temperatures. This assumption is justified by the observation that the NoC contributes only a relatively small fraction of the total chip power budget, and that this power is spatially distributed across the die rather than concentrated in a small number of locations \cite{Howard2011}. Consequently, the dominant source of thermal variation is taken to be the computational activity of the processing elements, while the routers are treated as thermally coupled to the tiles that contain them \cite{Clotho2015}.
 
-where $C_2$ is a proportionality constant, $I_{ds}$ is the drain current, $\phi_i$ denotes the minimum energy required for a hot electron to initiate impact ionization, $q$ is the elementary charge, $\lambda_e$ is the mean free path of hot electrons, and $E_m$ is the electric field in the channel.
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\linewidth]{body_chapters/chap_3/figs/temperature_map.png}
+    \caption[Per-router temperature map]{Example spatial mapping of temperature across the NoC. The map reflects the combination of spatially correlated thermal variation.}
+    \label{fig:temp_maps}
+\end{figure}
 
-All parameters other than $V_{th}$ and $L_{eff}$ are treated as technology-dependent constants and are fixed based on values reported in prior work. The resulting $I_{sub}$ value is stored as a single scalar per router, eliminating the need for repeated evaluation of the above expressions during runtime. The precomputed $I_{sub}$ is later used in the HCI aging model to determine degradation rates as a function of switching activity and temperature.
+Temperature is modeled as a slowly varying parameter rather than as a quantity that changes every cycle. In \cite{Clotho2015}, the absolute values of the temperature map are updated every $10^7$ cycles in order to emulate the gradually changing thermal behavior of a running CMP, consistent with prior observations by Mulas et al. \cite{Mulas2009}, that on-chip temperature sensing and thermal evolution occur over millisecond-scale intervals rather than cycle-by-cycle timescales. The same assumption is adopted here. Accordingly, the temperature map is periodically refreshed every $10^7$ cycles, allowing the routing algorithm to respond to long-term changes in the thermal profile without introducing unnecessary per-cycle thermal recomputation. The temperature assigned to each tile is generated as part of a spatial temperature map spanning the range of 65$^\circ$C to 85$^\circ$C, consistent with the range used in \cite{Clotho2015}. In implementation, these values are generated using a random but spatially correlated distribution so that neighboring tiles tend to exhibit similar thermal behavior. Figure \ref{fig:temp_maps} illustrates an example of such a temperature map. This per-tile temperature information is then used directly by the EM and HCI aging models. Since both failure mechanisms accelerate at higher temperatures, tiles operating at elevated temperature accumulate wear more rapidly than cooler tiles under otherwise similar activity conditions.
 
 \section{Aging Models}
 
 \subsubsection{Electromigration (EM)}
 
-Electromigration (EM) is a wearout mechanism in which momentum transfer from conducting electrons causes gradual displacement of metal ions in interconnect wires. Under sustained high current density, this ion migration leads to the formation of voids and hillocks, eventually resulting in open- or short-circuit failures. As technology scales and interconnect dimensions shrink, current densities increase, making EM a critical reliability concern in modern NoCs \cite{Clotho2015}.
+Electromigration (EM) is a wearout mechanism in which momentum transfer from conducting electrons causes gradual displacement of metal ions in interconnect wires \cite{Black1969}. Under sustained high current density, this ion migration leads to the formation of voids and hillocks, eventually resulting in open- or short-circuit failures. As technology scales and interconnect dimensions shrink, current densities increase, making EM a critical reliability concern in modern NoCs \cite{Clotho2015}.
 
-The lifetime of an interconnect under EM stress is commonly modeled using Black's equation:
+The lifetime of an interconnect under EM stress is commonly modeled using Black's equation \cite{Black1969}:
 \begin{equation}
 MTTF_{EM} = A_{EM} J^{-n} \exp\left(\frac{E_{a,EM}}{kT}\right)
 \end{equation}
-where $J$ is the current density, $n$ is an empirical exponent (typically close to 2), $E_{a,EM}$ is the activation energy, $T$ is temperature, and $k$ is Boltzman's constant.
+where $J$ is the current density, $n$ is an empirical exponent (typically close to 2 \cite{Clotho2015}), $E_{a,EM}$ is the activation energy, $T$ is temperature, and $k$ is Boltzman's constant.
 
-In NoC interconnects, current density is closely related to switching activity. As traffic increases, links are exercised more frequently, leading to a higher rate of current flow through the interconnect. Long router-to-router links tend to carry a larger share of traffic and exhibit higher effective current density compared to shorter intra-router wires. As a result, these links are more susceptible to electromigration-induced degradation.
+Current density is closely related to switching activity \cite{Black1969}. As traffic increases, links are exercised more frequently, leading to a higher rate of current flow through the interconnect. Long router-to-router links tend to carry a larger share of traffic and exhibit higher effective current density compared to shorter intra-router wires. As a result, these links are more susceptible to electromigration-induced degradation.
 
 Following \cite{Clotho2015}, current density is expressed in terms of link switching activity:
 \begin{equation}
 J \propto \alpha_{link}
 \end{equation}
 
-Substituting this relationship into Black's equation yields a simplified proportional model:
+Substituting this relationship into Black's equation yields a simplified proportional model \cite{Clotho2015}:
 \begin{equation}
 MTTF_{EM}(\alpha_{link}, T) \propto \alpha_{link}^{-2} \cdot \exp\left(\frac{E_{a,EM}}{kT}\right)
 \end{equation}
 
-The switching activity $\alpha_{link}$ is derived from link utilization:
+The switching activity $\alpha_{link}$ is derived from link utilization \cite{Clotho2015}:
 \begin{equation}
 \alpha_{link} = 0.5 \times U_{link}
 \end{equation}
@@ -130,15 +132,15 @@ A key characteristic of this model is its quadratic dependence on switching acti
 
 \subsubsection{Hot-Carrier Injection (HCI)}
 
-Hot-carrier injection (HCI) is a transistor-level aging mechanism caused by high-energy carriers that become trapped in the gate oxide during switching. Over time, this leads to a gradual increase in threshold voltage ($V_{th}$), which slows transistor switching speed and degrades circuit performance. In NoC routers, this degradation is most critical along timing-critical paths, where increased delay can eventually result in timing violations and system failure \cite{Clotho2015}.
+Hot-carrier injection (HCI) is a transistor-level aging mechanism caused by high-energy carriers that become trapped in the gate oxide during switching \cite{JEDEC122G}. Over time, this leads to a gradual increase in threshold voltage ($V_{th}$), which slows transistor switching speed and degrades circuit performance. In NoC routers, this degradation is most critical along timing-critical paths, where increased delay can eventually result in timing violations and system failure \cite{Clotho2015}.
 
-The lifetime of a device under HCI stress can be expressed as:
+The lifetime of a device under HCI stress can be expressed as \cite{JEDEC122G}:
 \begin{equation}
-MTTF_{HCI}^{DC} = A_{HCI} (I_{sub})^{-N} \exp\left(\frac{E_{a,HCI}}{kT}\right)
+MTTF_{HCI}^{DC} = B_{HCI} (I_{sub})^{-N} \exp\left(\frac{E_{a,HCI}}{kT}\right)
 \end{equation}
-where $I_{sub}$ is the substrate current during stress, $N$ is an empirical exponent (approximately 1.5), and $E_{a,HCI}$ is the activation energy.
+where $B_{HCI}$ is an arbitrary scale factor, $I_{sub}$ is the substrate current during stress, $N$ is an empirical exponent (approximately 1.5 \cite{Clotho2015}), $T$ is the temperature, and $E_{a,HCI}$ is the activation energy.
 
-Since HCI degradation occurs during switching events, its impact under dynamic operation is proportional to switching activity. Incorporating this effect yields:
+Since HCI degradation occurs during switching events, its impact under dynamic operation is proportional to switching activity. Incorporating this effect yields the following model for HCI lifetime under switching activity \cite{Clotho2015}:
 \begin{equation}
 MTTF_{HCI}^{AC}(\alpha_{router}, T) \propto \frac{(I_{sub})^{-N}}{\alpha_{router}} \cdot \exp\left(\frac{E_{a,HCI}}{kT}\right)
 \end{equation}
@@ -151,7 +153,7 @@ reflecting that only a subset of flits (primarily header flits) exercise the cri
 
 Unlike EM, HCI is strongly influenced by process variation. Variations in threshold voltage ($V_{th}$) and effective gate length ($L_{eff}$) affect the substrate current $I_{sub}$, which in turn determines degradation rate. As described in the previous section, $I_{sub}$ is computed per router as a function of these parameters and treated as a static quantity throughout execution.
 
-Combining these effects yields the final HCI model used in this work:
+Combining these effects yields the final HCI model used in this work, following the formulation in \cite{Clotho2015}:
 \begin{equation}
 MTTF_{HCI,PV} \propto \frac{(I_{sub}(V_{th}, L_{eff}))^{-N}}{\alpha_{router}} \cdot \exp\left(\frac{E_{a,HCI}}{kT}\right)
 \end{equation}
@@ -162,22 +164,28 @@ Compared to EM, HCI exhibits a weaker dependence on switching activity due to it
 
 \subsubsection{Utilization of Lifetime Models}
 
-The EM and HCI models described above are used to guide routing decisions and evaluate system reliability. During routing, the MTTF of candidate next-hop links and routers is computed using current utilization and temperature values. These MTTF estimates are normalized relative to the network state and used to define the reward signal for the reinforcement learning policy. Routing decisions are therefore biased toward paths that traverse components with higher estimated lifetime.
+The EM and HCI models described above are used both to guide routing decisions and to evaluate system reliability. During routing, the MTTF of candidate next-hop links and routers is computed using recent utilization statistics and current temperature values. These MTTF estimates are normalized relative to the network state and used to define the reward signal for the reinforcement learning policy. As a result, routing decisions are biased toward paths that traverse components with higher estimated lifetime.
 
-Throughout simulation, MTTF values are updated periodically as utilization statistics and temperature maps are refreshed. This enables the system to track the evolution of wear across all network components under dynamic traffic conditions. At the end of simulation, the final MTTF values of all routers and links are collected. The system lifetime is defined by the most degraded component, reflecting the fact that failure of a single critical link or router can render the network unusable.
+To capture current stress conditions, utilization is computed using a windowed formulation rather than cumulative statistics. Every $10^3$ cycles, as opposed to $10^4$ cycles proposed by \cite{Clotho2015}, link and router activity is sampled to obtain a recent utilization rate, defined as the number of events observed within the window divided by the window duration. This produces a measure of instantaneous switching activity that reflects recent traffic behavior.
 
-To compare routing algorithms, the acceleration factor (AF) is used as a relative lifetime metric:
+Using cumulative averages would dilute recent activity with historical behavior. For example, a component that was heavily utilized earlier in the simulation but is currently idle would still appear moderately stressed when using lifetime-averaged statistics. This leads to inaccurate MTTF estimates, as the model would continue to penalize components that are no longer under significant stress. In contrast, the windowed formulation ensures that utilization reflects the current operating conditions of each component. This is consistent with the underlying physics-of-failure models for EM and HCI, where degradation rates depend on the present level of electrical and thermal stress rather than long-term averages. As a result, the routing policy can more accurately identify and avoid currently stressed components.
+
+The choice of a $10^3$ cycle window provides a balance between responsiveness and stability. Smaller windows can introduce noise due to short-term traffic fluctuations, while larger windows may fail to capture changes in load distribution in a timely manner. This design enables the routing policy to respond effectively to dynamic traffic conditions while maintaining stable utilization estimates.
+
+Throughout simulation, these utilization snapshots are updated periodically and used to recompute EM and HCI MTTF estimates as needed. The MTTF values are not maintained as persistent aging state variables; instead, they are derived on demand from the latest utilization statistics, temperature map, and static process-variation parameters. This enables the routing policy to continuously adapt to dynamic traffic conditions. At the end of simulation, the final utilization statistics are used to compute MTTF values for all routers and links. The system lifetime is then defined by the most degraded component, reflecting the fact that failure of a single critical link or router can render the network unusable.
+
+To compare routing algorithms, the acceleration factor (AF) is used as a relative lifetime metric, as defined by \cite{JEDEC122G}:
 \begin{equation}
-AF_{EM} = \frac{MTTF_{EM}|_{RL}}{MTTF_{EM}|_{DOR}}, 
+AF_{EM} = \frac{MTTF_{EM}|_{custom\_algo}}{MTTF_{EM}|_{DOR}}, 
 \quad
-AF_{HCI} = \frac{MTTF_{HCI,PV}|_{RL}}{MTTF_{HCI,PV}|_{DOR}}
+AF_{HCI} = \frac{MTTF_{HCI,PV}|_{custom\_algo}}{MTTF_{HCI,PV}|_{DOR}}
 \end{equation}
 
 Since both configurations share identical process variation and technology parameters, unknown constants and the precomputed $I_{sub}$ cancel out in the ratio. As a result, the acceleration factor depends only on runtime variables such as utilization and temperature.
 
 \section{Reinforcement Learning-Based Routing Policy}
 
-Reinforcement learning (RL) is a learning framework in which an agent interacts with an environment to learn a policy that maximizes long-term cumulative reward. At each decision step, the agent observes the current state $s$, selects an action $a$, and receives a reward $r$ based on the outcome of that action. The system then transitions to a new state $s'$, and the process repeats. Over time, the agent improves its decision-making by learning from these interactions. Figure~\ref{fig:RL_framework} illustrates this agent–environment interaction model.
+Reinforcement learning (RL) \cite{SuttonBarto2018} is a learning framework in which an agent interacts with an environment to learn a policy that maximizes long-term cumulative reward. At each decision step, the agent observes the current state $s$, selects an action $a$, and receives a reward $r$ based on the outcome of that action. The system then transitions to a new state $s'$, and the process repeats. Over time, the agent improves its decision-making by learning from these interactions. Figure~\ref{fig:RL_framework} illustrates this agent–environment interaction model.
 
 \begin{figure}[ht]
   \centering
@@ -186,9 +194,9 @@ Reinforcement learning (RL) is a learning framework in which an agent interacts 
   \label{fig:RL_framework}
 \end{figure}
 
-In this work, we adopt Q-learning, a value-based RL method. Q-learning estimates the expected cumulative reward of taking an action $a$ in a state $s$, represented by the Q-value function $Q(s,a)$. The optimal policy is obtained by selecting actions that maximize this value.
+In this work, we adopt Q-learning \cite{Watkins1989}, a value-based RL method. Q-learning estimates the expected cumulative reward of taking an action $a$ in a state $s$, represented by the Q-value function $Q(s,a)$. The optimal policy is obtained by selecting actions that maximize this value.
 
-The Q-values are updated iteratively using the Bellman equation:
+The Q-values are updated iteratively using the Bellman equation \cite{BellmanDreyfus1962}:
 
 \begin{equation}
 Q(s,a) \leftarrow Q(s,a) + \alpha \left[ r + \gamma \max_{a'} Q(s',a') - Q(s,a) \right]
@@ -196,11 +204,11 @@ Q(s,a) \leftarrow Q(s,a) + \alpha \left[ r + \gamma \max_{a'} Q(s',a') - Q(s,a) 
 
 where $\alpha$ is the learning rate and $\gamma$ is the discount factor. The term inside the brackets is the temporal-difference (TD) error, which measures how well the current estimate matches observed outcomes.
 
-In the context of NoCs, routing decisions can be formulated as a sequential decision-making problem, where each router selects the next-hop direction for a packet based on local network conditions. Each router is modeled as an independent RL agent, and routing corresponds to selecting an action that maximizes long-term reward. Direct application of tabular Q-learning, however, is impractical in NoCs due to the large state-action space, which grows rapidly with network size. This leads to excessive storage requirements and slow convergence, commonly referred to as the curse of dimensionality. To address this limitation, this work adopts a linear function approximation approach inspired by LARE \cite{LARE2023}, where Q-values are represented using a compact feature-based model instead of a lookup table.
+In the context of NoCs, routing decisions can be formulated as a sequential decision-making problem, where each router selects the next-hop direction for a packet based on local network conditions. Each router is modeled as an independent RL agent, and routing corresponds to selecting an action that maximizes long-term reward \cite{LARE2023}. Direct application of tabular Q-learning, however, is impractical in NoCs due to the large state-action space, which grows rapidly with network size. This leads to excessive storage requirements and slow convergence, commonly referred to as the curse of dimensionality \cite{Ebrahimi2012}. To address this limitation, this work adopts a linear function approximation approach inspired by LARE \cite{LARE2023}, where Q-values are represented using a compact feature-based model instead of a lookup table.
 
 \subsubsection{State Representation}
 
-Routing decisions are made at each router when multiple minimal paths are available. Instead of representing the state explicitly, each state-action pair $(s,a)$ is encoded using a feature vector $\phi(s,a)$:
+Routing decisions are made at each router when multiple minimal paths are available. Instead of representing the state explicitly, each state-action pair $(s,a)$ is encoded using a feature vector $\phi(s,a)$, adapted from \cite{LARE2023}:
 
 \begin{equation}
 \phi(s,a) = [f_0, f_1, f_2, f_3, f_4, f_5, f_6, f_7, f_8]
@@ -223,7 +231,7 @@ This representation allows the agent to incorporate both performance related and
 
 \subsubsection{Q-Value Function}
 
-To reduce hardware overhead, the Q-value is approximated using a linear function:
+To reduce hardware overhead, the Q-value is approximated using a linear function \cite{LARE2023}:
 
 \begin{equation}
 Q(s,a) = \theta_0 \cdot f_0 + \theta_1 \cdot f_1 + \theta_2 \cdot f_2 + \theta_3 \cdot f_3 + \theta_4 \cdot f_4 + \theta_5 \cdot f_5 + \theta_6 \cdot f_6 + \theta_7 \cdot f_7 + \theta_8 \cdot f_8
@@ -255,27 +263,27 @@ The reward function is designed to jointly capture reliability and performance o
 R = 0.7 \cdot \text{MTTF}_{score} - 0.3 \cdot \text{cong}_{norm}
 \end{equation}
 
-The reliability component is defined as:
+The reliability component is defined as a weighted sum of normalized EM and HCI MTTF values, adapted from \cite{Clotho2015}:
 \begin{equation}
-\text{MTTF}_{score} = C_{EM} \cdot EM_{norm} + C_{HCI} \cdot HCI_{norm}
+\text{MTTF}_{score} = C_{EM} \cdot MTTF_{EM_{norm}} + C_{HCI} \cdot MTTF_{HCI_{norm}}
 \end{equation}
 
 The EM and HCI values are normalized across candidate actions:
 \begin{equation}
-EM_{norm} = \frac{MTTF_{EM}}{\max(MTTF_{EM}^{(h)}, MTTF_{EM}^{(v)})}
+MTTF_{EM_{norm}} = \frac{MTTF_{EM}}{\max(MTTF_{EM}^{(h)}, MTTF_{EM}^{(v)})}
 \end{equation}
 
 \begin{equation}
-HCI_{norm} = \frac{MTTF_{HCI}}{\max(MTTF_{HCI}^{(h)}, MTTF_{HCI}^{(v)})}
+MTTF_{HCI_{norm}} = \frac{MTTF_{HCI}}{\max(MTTF_{HCI}^{(h)}, MTTF_{HCI}^{(v)})}
 \end{equation}
 
 where the superscripts $(h)$ and $(v)$ denote the horizontal and vertical candidate next hops, respectively.
 
-To dynamically emphasize the more critical aging mechanism, adaptive weights are computed using:
+To dynamically emphasize the more critical aging mechanism, and to encourage the agent to route packets around heavily stressed components, adaptive weights are computed using the model proposed in \cite{Clotho2015}:
 
 \begin{equation}
 C(x) =
-\frac{\exp\left(8 \cdot \frac{x - x_{min}}{x_{max} - x_{min}}\right) - \exp(-8)}
+\frac{\exp\left(8 \cdot \frac{x - x_{max}}{x_{max} - x_{min}}\right) - \exp(-8)}
 {1 - \exp(-8)}
 \end{equation}
 
@@ -296,16 +304,16 @@ This formulation encourages the routing policy to prefer paths that both reduce 
 
 \subsubsection{Update Rule}
 
-The parameter vector $\theta$ is updated using temporal-difference learning. First, the TD error is computed:
-
-\begin{equation}
-\delta = R + \gamma \max_{a'} Q(s', a') - Q(s,a)
-\end{equation}
-
-The parameters are then updated as:
+The parameter vector $\theta$ is updated using temporal-difference learning. The update rule for linear function approximation is given by \cite{LARE2023}:
 
 \begin{equation}
 \theta \leftarrow \theta + \alpha \cdot \delta \cdot \phi(s,a)
+\end{equation}
+
+where $\delta$ is the TD error defined as:
+
+\begin{equation}
+\delta = R + \gamma \max_{a'} Q(s', a') - Q(s,a)
 \end{equation}
 
 This update adjusts the model parameters in the direction that reduces the discrepancy between predicted and observed rewards, allowing the routing policy to improve over time.
@@ -321,32 +329,32 @@ A typical NoC router employs virtual channel (VC) flow control to efficiently ut
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.95\linewidth]{body_chapters/chap_3/figs/router.png}
-    \caption[NoC Router Microarchitecture]{Router microarchitecture based on virtual channel flow control.}
+    \caption[NoC Router Microarchitecture]{Router microarchitecture based on virtual channel flow control, adapted from \cite{Kondoth2026}.}
     \label{fig:router_arch}
 \end{figure}
 
-Incoming packets arrive at an input port and are stored in input buffers organized as multiple virtual channels. Each VC maintains a separate queue of flits, allowing multiple packets to share the same physical channel without blocking each other. When a packet reaches the head of a VC, the routing unit determines the set of candidate output ports based on the routing algorithm. The packet then requests access to a downstream VC at the next router. Once a downstream VC is successfully allocated, the packet competes for access to the crossbar through the switch allocator. If granted, the packet is forwarded through the crossbar to the selected output port and transmitted to the next router. This process repeats at each hop, resulting in a sequence of resource acquisitions: input VC, downstream VC, switch allocation, and output link traversal.
+Incoming packets arrive at an input port and are stored in input buffers organized as multiple virtual channels (VC) \cite{Atik2018}. Each VC maintains a separate queue of flits, allowing multiple packets to share the same physical channel without blocking each other. When a packet reaches the head of a VC, the routing unit determines the set of candidate output ports based on the routing algorithm \cite{Dally2001}. The packet then requests access to a downstream VC at the next router. Once a downstream VC is successfully allocated, the packet competes for access to the crossbar through the switch allocator \cite{Kondoth2026}. If granted, the packet is forwarded through the crossbar to the selected output port and transmitted to the next router \cite{Jojima2016}. This process repeats at each hop, resulting in a sequence of resource acquisitions: input VC, downstream VC, switch allocation, and output link traversal.
 
 \subsubsection{Deadlock Formation}
 
-The staged allocation of resources creates dependencies between packets across routers. A packet occupying a VC at one router may be blocked while waiting for a downstream VC at the next router. If that downstream VC is already occupied by another packet, the dependency extends further along the network. Deadlock occurs when a set of packets forms a cyclic dependency, where each packet holds a resource while waiting for another resource held by another packet in the cycle.
+The staged allocation of resources creates dependencies between packets across routers. A packet occupying a VC at one router may be blocked while waiting for a downstream VC at the next router. If that downstream VC is already occupied by another packet, the dependency extends further along the network. Deadlock occurs when a set of packets forms a cyclic dependency, where each packet holds a resource while waiting for another resource held by another packet in the cycle \cite{Duato1993}.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.95\linewidth]{body_chapters/chap_3/figs/deadlock.png}
-    \caption[Deadlock Formation]{Example of cyclic resource dependency leading to deadlock in a mesh NoC.}
+    \caption[Deadlock Formation]{Example of cyclic resource dependency leading to deadlock in a mesh NoC, adapted from \cite{Tvrdik1999VCDeadlock}.}
     \label{fig:deadlock_cycle}
 \end{figure}
 
-In a 2D mesh, such cycles can occur when packets routed in different directions occupy VCs in neighboring routers while waiting for each other's downstream resources, forming a closed loop. Since none of the packets can release their current resources until they acquire the next one, no forward progress is possible. This is illustrated in Figure~\ref{fig:deadlock_cycle}, where packets $P_0$, $P_1$, $P_2$, and $P_3$ form a cycle of dependencies across four routers. Each packet is waiting for a buffer in the downstream router that is currently being occupied by another packet in the cycle, resulting in a situation where no packet can proceed and the system is effectively stalled.
+In a 2D mesh, such cycles can occur when packets routed in different directions occupy VCs in neighboring routers while waiting for each other's downstream resources, forming a closed loop. Since none of the packets can release their current resources until they acquire the next one, no forward progress is possible \cite{Duato1993}. This is illustrated in Figure~\ref{fig:deadlock_cycle}, where packets $P_0$, $P_1$, $P_2$, and $P_3$ form a cycle of dependencies across four routers. Each packet is waiting for a buffer in the downstream router that is currently being occupied by another packet in the cycle, resulting in a situation where no packet can proceed and the system is effectively stalled.
 
-Adaptive routing increases the likelihood of such cycles because it allows packets to dynamically select different paths. Unlike deterministic routing, which enforces a strict ordering of channel acquisition, adaptive routing introduces flexibility that can lead to arbitrary dependency patterns and potential deadlock.
+Adaptive routing increases the likelihood of such cycles because it allows packets to dynamically select different paths \cite{LARE2023}. Unlike deterministic routing, which enforces a strict ordering of channel acquisition, adaptive routing introduces flexibility that can lead to arbitrary dependency patterns and potential deadlock.
 
 \subsubsection{Deadlock Avoidance Using Escape Virtual Channels}
 
 To guarantee deadlock freedom, this work adopts an escape virtual channel mechanism based on Duato's theory \cite{Duato1993}. The key idea is to reserve a subset of network resources that follow a strictly deadlock-free routing function, ensuring that at least one acyclic path is always available.
 
-In this implementation, one virtual channel (VC0) is designated as the escape channel and is restricted to deterministic dimension-order (XY) routing. Since XY routing enforces a strict ordering of channel acquisition and is provably deadlock-free, any packet assigned to this channel is guaranteed forward progress. All remaining virtual channels are allowed to use the RL-based adaptive routing policy. If a packet cannot safely proceed using adaptive routing, it can transition to the escape VC and continue using XY routing. This mechanism ensures that cyclic dependencies are avoided while preserving the flexibility of adaptive routing for the majority of traffic.
+In this implementation, one virtual channel (VC0) is designated as the escape channel and is restricted to deterministic dimension-order (XY) routing \cite{Duato1993}. Since XY routing enforces a strict ordering of channel acquisition and is provably deadlock-free \cite{Dally1987}, any packet assigned to this channel is guaranteed forward progress. All remaining virtual channels are allowed to use the RL-based adaptive routing policy. If a packet cannot safely proceed using adaptive routing, it can transition to the escape VC and continue using XY routing. This mechanism ensures that cyclic dependencies are avoided while preserving the flexibility of adaptive routing for the majority of traffic.
 
 % \section{Tables}
 

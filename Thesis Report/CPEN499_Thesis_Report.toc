@@ -15,38 +15,38 @@
 \contentsline {section}{\numberline {2.4}{Aging-Aware Routing Algorithms}}{12}{section.2.4}%
 \contentsline {section}{\numberline {2.5}{Motivation for Learning-Based Aging-Aware Routing}}{14}{section.2.5}%
 \contentsline {chapter}{\numberline {3}{Aging-Aware Routing Algorithm System Design}}{16}{chapter.3}%
-\contentsline {section}{\numberline {3.1}{Dynamic Temperature Variation}}{16}{section.3.1}%
-\contentsline {section}{\numberline {3.2}{Process Variation}}{18}{section.3.2}%
+\contentsline {section}{\numberline {3.1}{Process Variation}}{16}{section.3.1}%
+\contentsline {section}{\numberline {3.2}{Dynamic Temperature Variation}}{20}{section.3.2}%
 \contentsline {section}{\numberline {3.3}{Aging Models}}{21}{section.3.3}%
 \contentsline {subsubsection}{{Electromigration (EM)}}{21}{section*.14}%
-\contentsline {subsubsection}{{Hot-Carrier Injection (HCI)}}{22}{section*.15}%
+\contentsline {subsubsection}{{Hot-Carrier Injection (HCI)}}{23}{section*.15}%
 \contentsline {subsubsection}{{Utilization of Lifetime Models}}{24}{section*.16}%
-\contentsline {section}{\numberline {3.4}{Reinforcement Learning-Based Routing Policy}}{24}{section.3.4}%
-\contentsline {subsubsection}{{State Representation}}{26}{section*.18}%
-\contentsline {subsubsection}{{Q-Value Function}}{26}{section*.19}%
-\contentsline {subsubsection}{{Action Selection Policy}}{27}{section*.20}%
-\contentsline {subsubsection}{{Reward Function}}{27}{section*.21}%
-\contentsline {subsubsection}{{Update Rule}}{28}{section*.22}%
-\contentsline {section}{\numberline {3.5}{Deadlock Avoidance}}{29}{section.3.5}%
-\contentsline {subsubsection}{{Router Microarchitecture}}{29}{section*.23}%
-\contentsline {subsubsection}{{Deadlock Formation}}{30}{section*.25}%
-\contentsline {subsubsection}{{Deadlock Avoidance Using Escape Virtual Channels}}{31}{section*.27}%
-\contentsline {chapter}{\numberline {4}{Evaluation}}{32}{chapter.4}%
-\contentsline {section}{\numberline {4.1}{Simulation Setup}}{32}{section.4.1}%
-\contentsline {section}{\numberline {4.2}{Garnet Synthetic Traffic and Evaluation Metrics}}{33}{section.4.2}%
-\contentsline {section}{\numberline {4.3}{Results}}{34}{section.4.3}%
-\contentsline {subsubsection}{{Acceleration Factor}}{34}{section*.28}%
-\contentsline {paragraph}{{Electromigration (EM) Results}}{35}{section*.31}%
-\contentsline {paragraph}{{Hot-Carrier Injection (HCI) Results}}{36}{section*.32}%
-\contentsline {paragraph}{{Discussion}}{36}{section*.33}%
-\contentsline {subsubsection}{{Latency Analysis}}{37}{section*.34}%
-\contentsline {chapter}{\numberline {5}{Limitations and Future Work}}{42}{chapter.5}%
-\contentsline {section}{\numberline {5.1}{Limitations}}{42}{section.5.1}%
-\contentsline {section}{\numberline {5.2}{Future Work}}{42}{section.5.2}%
-\contentsline {chapter}{\numberline {6}{Conclusion}}{44}{chapter.6}%
-\contentsline {chapter}{{Bibliography}}{45}{chapter*.39}%
+\contentsline {section}{\numberline {3.4}{Reinforcement Learning-Based Routing Policy}}{25}{section.3.4}%
+\contentsline {subsubsection}{{State Representation}}{27}{section*.18}%
+\contentsline {subsubsection}{{Q-Value Function}}{27}{section*.19}%
+\contentsline {subsubsection}{{Action Selection Policy}}{28}{section*.20}%
+\contentsline {subsubsection}{{Reward Function}}{28}{section*.21}%
+\contentsline {subsubsection}{{Update Rule}}{29}{section*.22}%
+\contentsline {section}{\numberline {3.5}{Deadlock Avoidance}}{30}{section.3.5}%
+\contentsline {subsubsection}{{Router Microarchitecture}}{30}{section*.23}%
+\contentsline {subsubsection}{{Deadlock Formation}}{31}{section*.25}%
+\contentsline {subsubsection}{{Deadlock Avoidance Using Escape Virtual Channels}}{32}{section*.27}%
+\contentsline {chapter}{\numberline {4}{Evaluation}}{33}{chapter.4}%
+\contentsline {section}{\numberline {4.1}{Simulation Setup}}{33}{section.4.1}%
+\contentsline {section}{\numberline {4.2}{Garnet Synthetic Traffic and Evaluation Metrics}}{34}{section.4.2}%
+\contentsline {section}{\numberline {4.3}{Results}}{35}{section.4.3}%
+\contentsline {subsubsection}{{Acceleration Factor}}{35}{section*.28}%
+\contentsline {paragraph}{{Electromigration (EM) Results}}{36}{section*.31}%
+\contentsline {paragraph}{{Hot-Carrier Injection (HCI) Results}}{37}{section*.32}%
+\contentsline {paragraph}{{Discussion}}{37}{section*.33}%
+\contentsline {subsubsection}{{Latency Analysis}}{38}{section*.34}%
+\contentsline {chapter}{\numberline {5}{Limitations and Future Work}}{43}{chapter.5}%
+\contentsline {section}{\numberline {5.1}{Limitations}}{43}{section.5.1}%
+\contentsline {section}{\numberline {5.2}{Future Work}}{43}{section.5.2}%
+\contentsline {chapter}{\numberline {6}{Conclusion}}{45}{chapter.6}%
+\contentsline {chapter}{{Bibliography}}{46}{chapter*.39}%
 \contentsline {part}{{Appendices}}{}{}
-\contentsline {chapter}{\numberline {A}{Mean Acceleration Factor}}{49}{appendix.A}%
-\contentsline {section}{\numberline {A.1}{Mean Acceleration Factor (AF) Trends Across Injection Rates}}{49}{section.A.1}%
-\contentsline {chapter}{\numberline {B}{Access to Research Work}}{52}{appendix.B}%
-\contentsline {section}{\numberline {B.1}{Code}}{52}{section.B.1}%
+\contentsline {chapter}{\numberline {A}{Mean Acceleration Factor}}{53}{appendix.A}%
+\contentsline {section}{\numberline {A.1}{Mean Acceleration Factor (AF) Trends Across Injection Rates}}{53}{section.A.1}%
+\contentsline {chapter}{\numberline {B}{Access to Research Work}}{56}{appendix.B}%
+\contentsline {section}{\numberline {B.1}{Code}}{56}{section.B.1}%
